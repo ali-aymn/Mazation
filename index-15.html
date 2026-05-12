@@ -1,0 +1,4625 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- TASK 6: Rebranded title -->
+  <title>4U — نظام إدارة المستودع</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- ============================================================
+     FIREBASE SDK — Modular CDN (compat version for plain HTML)
+     ============================================================ -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <style>
+    /* ============================================================
+   TASK 3: LIGHT MODE — Kratos inspired (White dominant + Red)
+   ============================================================ */
+    :root {
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --surface2: #fafafa;
+      --surface3: #f0f0f0;
+      --border: #e0e0e0;
+      /* TASK 3: Deep red accent inspired by Kratos markings */
+      --accent: #c0392b;
+      --accent-light: rgba(192, 57, 43, 0.08);
+      --accent-dark: #a93226;
+      --green: #10b981;
+      --green-light: #ecfdf5;
+      --amber: #f59e0b;
+      --amber-light: #fffbeb;
+      --red: #c0392b;
+      --red-light: rgba(192, 57, 43, 0.08);
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      /* TASK 3: White dominant text */
+      --text: #1a1a1a;
+      --text-muted: #555555;
+      --text-light: #888888;
+      --shadow: 0 1px 4px rgba(0, 0, 0, 0.07), 0 4px 16px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.13);
+      --radius: 14px;
+      --sw: 265px;
+    }
+
+    /* ============================================================
+   TASK 2: DARK MODE — Iron Throne inspired (Black dominant + Red)
+   ============================================================ */
+    [data-theme=dark] {
+      /* Pure black dominant — Iron Throne darkness */
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #181818;
+      --surface3: #1f1f1f;
+      --border: #2a2a2a;
+      /* Strong red accent */
+      --accent: #c0392b;
+      --accent-light: rgba(192, 57, 43, 0.12);
+      --accent-dark: #a93226;
+      --green: #10b981;
+      --green-light: rgba(16, 185, 129, 0.1);
+      --amber: #f59e0b;
+      --amber-light: rgba(245, 158, 11, 0.1);
+      --red: #c0392b;
+      --red-light: rgba(192, 57, 43, 0.12);
+      /* Clean readable text on deep black */
+      --text: #e8e8e8;
+      --text-muted: #888888;
+      --text-light: #444444;
+      --shadow: 0 1px 4px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.6);
+      --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background .3s, color .3s
+    }
+
+    /* ============================================================
+   TASK 7: UPGRADED 4U LOGO — SVG defined in body
+   Task 3: Logo upgrade with circular red frame + blade details
+   ============================================================ */
+
+    /* ============================================================
+   TASK 5 UPGRADED: CINEMATIC SPRAY-PAINT SPLASH SCREEN
+   ============================================================ */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 9999;
+      transition: opacity .7s ease;
+    }
+
+    #splash-screen.fade-out {
+      opacity: 0;
+      pointer-events: none
+    }
+
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      position: relative;
+      z-index: 2
+    }
+
+    .splash-emblem {
+      width: 130px;
+      height: 130px;
+      position: relative;
+      opacity: 0;
+      animation: sprayReveal .7s ease .3s forwards;
+      filter: drop-shadow(0 0 24px rgba(192, 57, 43, 0.7));
+    }
+
+    @keyframes sprayReveal {
+      0% {
+        opacity: 0;
+        transform: scale(1.4);
+        filter: blur(10px) drop-shadow(0 0 40px rgba(192, 57, 43, 1))
+      }
+
+      70% {
+        opacity: 0.95;
+        filter: blur(1px) drop-shadow(0 0 20px rgba(192, 57, 43, 0.6))
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: drop-shadow(0 0 14px rgba(192, 57, 43, 0.4))
+      }
+    }
+
+    .splash-emblem svg {
+      width: 100%;
+      height: 100%
+    }
+
+    .splash-title {
+      font-size: 70px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 12px;
+      margin-top: 10px;
+      opacity: 0;
+      animation: sprayText .5s ease .9s forwards;
+      text-shadow: 0 0 50px rgba(192, 57, 43, 0.5);
+      position: relative;
+    }
+
+    .splash-title::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 8%;
+      right: 8%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #c0392b, transparent);
+      opacity: 0;
+      animation: sprayLine .4s ease 1.3s forwards;
+      transform: scaleX(0);
+    }
+
+    @keyframes sprayLine {
+      from {
+        opacity: 0;
+        transform: scaleX(0)
+      }
+
+      to {
+        opacity: 1;
+        transform: scaleX(1)
+      }
+    }
+
+    @keyframes sprayText {
+      0% {
+        opacity: 0;
+        letter-spacing: 22px
+      }
+
+      100% {
+        opacity: 1;
+        letter-spacing: 12px
+      }
+    }
+
+    .splash-bar {
+      width: 150px;
+      height: 2px;
+      background: #111;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 22px;
+      opacity: 0;
+      animation: fadeInEl .4s ease 1.1s forwards;
+    }
+
+    .splash-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b0000, #c0392b, #ff4444, #c0392b);
+      background-size: 200% 100%;
+      animation: splashLoad 2.4s ease 1.2s both, shimmer 1.2s linear 1.2s infinite;
+      width: 0;
+    }
+
+    @keyframes splashLoad {
+      from {
+        width: 0
+      }
+
+      to {
+        width: 100%
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    .splash-subtitle {
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 16px;
+      opacity: 0;
+      animation: fadeInEl .5s ease 1.5s forwards;
+    }
+
+    .splash-tagline {
+      font-size: 10px;
+      color: #333;
+      letter-spacing: 2px;
+      margin-top: 5px;
+      opacity: 0;
+      animation: fadeInEl .5s ease 1.7s forwards;
+    }
+
+    @keyframes fadeInEl {
+      from {
+        opacity: 0;
+        transform: translateY(6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    /* ============================================================
+   TASK 4: LOGIN SCREEN — Premium Black/Red/White
+   ============================================================ */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, #140000 0%, #0a0a0a 55%, #000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    #login-screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(192, 57, 43, 0.018) 44px, rgba(192, 57, 43, 0.018) 45px),
+        repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(192, 57, 43, 0.018) 44px, rgba(192, 57, 43, 0.018) 45px);
+    }
+
+    .login-box {
+      background: rgba(7, 7, 7, 0.97);
+      border: 1px solid rgba(192, 57, 43, 0.22);
+      border-radius: 20px;
+      padding: 44px 40px;
+      width: 400px;
+      box-shadow: 0 0 80px rgba(192, 57, 43, 0.07), 0 24px 80px rgba(0, 0, 0, 0.95);
+      animation: loginIn .5s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 12%;
+      right: 12%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #c0392b, transparent);
+    }
+
+    .login-box::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 25%;
+      right: 25%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.25), transparent);
+    }
+
+    @keyframes loginIn {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.97)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 28px
+    }
+
+    .login-emblem {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 14px;
+    }
+
+    .login-emblem svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 12px rgba(192, 57, 43, 0.5))
+    }
+
+    .login-logo h1 {
+      font-size: 28px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 5px;
+      text-shadow: 0 0 20px rgba(192, 57, 43, 0.25)
+    }
+
+    .login-logo p {
+      font-size: 11px;
+      color: #3a3a3a;
+      margin-top: 4px;
+      letter-spacing: 2px;
+      text-transform: uppercase
+    }
+
+    .lfield {
+      margin-bottom: 14px
+    }
+
+    .lfield label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #4a4a4a;
+      display: block;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+      text-transform: uppercase
+    }
+
+    .lfield input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #1a1a1a;
+      border-radius: 8px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: all .2s;
+      background: #0a0a0a;
+      color: #e0e0e0;
+    }
+
+    .lfield input:focus {
+      border-color: #c0392b;
+      background: #0f0f0f;
+      box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.1)
+    }
+
+    .lfield input::placeholder {
+      color: #252525
+    }
+
+    .login-hint {
+      font-size: 11px;
+      color: #252525;
+      margin-top: 8px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid #111;
+      padding: 8px;
+      border-radius: 7px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #c0392b, #8b0000);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all .2s;
+      box-shadow: 0 4px 20px rgba(192, 57, 43, 0.35);
+      letter-spacing: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent);
+      pointer-events: none
+    }
+
+    .login-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(192, 57, 43, 0.5)
+    }
+
+    .login-err {
+      color: #c0392b;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+      display: none
+    }
+
+    /* ============================================================
+   SIDEBAR — with rune texture + red accents Task 4
+   ============================================================ */
+    .sidebar {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: var(--sw);
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 200;
+      transition: all .3s
+    }
+
+    [data-theme=dark] .sidebar {
+      border-left-color: #181818;
+      background: #080808
+    }
+
+    [data-theme=dark] .sidebar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        repeating-linear-gradient(60deg, transparent, transparent 22px, rgba(192, 57, 43, 0.014) 22px, rgba(192, 57, 43, 0.014) 23px),
+        repeating-linear-gradient(-60deg, transparent, transparent 22px, rgba(192, 57, 43, 0.014) 22px, rgba(192, 57, 43, 0.014) 23px);
+    }
+
+    .sidebar>* {
+      position: relative;
+      z-index: 1
+    }
+
+    .logo-area {
+      padding: 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative
+    }
+
+    [data-theme=dark] .logo-area::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 8%;
+      right: 8%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.5), transparent)
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .logo-icon svg {
+      width: 36px;
+      height: 36px;
+      filter: drop-shadow(0 0 6px rgba(192, 57, 43, 0.35))
+    }
+
+    .logo-text h1 {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--text)
+    }
+
+    .logo-text span {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: block;
+      letter-spacing: 1px
+    }
+
+    .logo-badge {
+      margin-right: auto;
+      background: var(--accent);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 1px;
+    }
+
+    .nav {
+      padding: 12px 10px;
+      flex: 1;
+      overflow-y: auto
+    }
+
+    .nav-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--text-light);
+      padding: 0 10px;
+      margin: 12px 0 5px;
+      text-transform: uppercase
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 11px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1px;
+      transition: all .15s
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text)
+    }
+
+    /* Task 2: Global Red Active */
+    .nav-item.active {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 700
+    }
+
+    [data-theme=dark] .nav-item.active {
+      border-right: 2px solid var(--accent);
+      background: rgba(192, 57, 43, 0.1);
+      color: #ff6b6b
+    }
+
+    .nav-item .ni {
+      font-size: 16px;
+      width: 19px;
+      text-align: center
+    }
+
+    .nbadge {
+      margin-right: auto;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      min-width: 20px;
+      text-align: center
+    }
+
+    .nbadge.red {
+      background: var(--accent);
+      color: #fff
+    }
+
+    .nbadge.blue {
+      background: var(--accent-light);
+      color: var(--accent)
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border)
+    }
+
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 11px;
+      background: var(--surface2);
+      border-radius: 9px
+    }
+
+    .uavatar {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: #fff;
+      font-weight: 700;
+      flex-shrink: 0
+    }
+
+    .uname {
+      font-size: 13px;
+      font-weight: 700
+    }
+
+    .urole {
+      font-size: 10px;
+      color: var(--text-muted)
+    }
+
+    .logout-btn {
+      margin-right: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--text-muted);
+      transition: color .15s
+    }
+
+    .logout-btn:hover {
+      color: var(--accent)
+    }
+
+    /* MAIN */
+    .main {
+      margin-right: var(--sw);
+      min-height: 100vh
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow)
+    }
+
+    [data-theme=dark] .topbar {
+      background: #080808;
+      border-bottom-color: #161616
+    }
+
+    .tb-left h2 {
+      font-size: 19px;
+      font-weight: 900
+    }
+
+    .tb-left p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px
+    }
+
+    .tb-right {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .searchbox {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 12px;
+      width: 200px;
+      transition: all .2s
+    }
+
+    .searchbox:focus-within {
+      border-color: var(--accent);
+      background: var(--surface)
+    }
+
+    .searchbox input {
+      background: none;
+      border: none;
+      outline: none;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      width: 100%
+    }
+
+    .searchbox input::placeholder {
+      color: var(--text-light)
+    }
+
+    .icon-btn-top {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all .15s;
+      color: var(--text-muted)
+    }
+
+    .icon-btn-top:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-color: var(--accent)
+    }
+
+    /* Task 1: 12-hour time display */
+    .wb-time-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start
+    }
+
+    .wb-time {
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 5px
+    }
+
+    .wb-ampm {
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0.7;
+      letter-spacing: 1px;
+      margin-top: 1px
+    }
+
+    .wb-country {
+      font-size: 10px;
+      opacity: 0.5;
+      letter-spacing: 1px;
+      margin-top: 3px
+    }
+
+    .wb-date-label {
+      font-size: 12px;
+      opacity: 0.65;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px
+    }
+
+    /* BUTTONS — Task 2 Red Active Global */
+    .btn {
+      padding: 8px 16px;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      transition: all .18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(192, 57, 43, 0.3)
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(192, 57, 43, 0.4)
+    }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border)
+    }
+
+    .btn-ghost:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-color: var(--accent)
+    }
+
+    .btn-danger {
+      background: var(--red-light);
+      color: var(--red);
+      border: 1px solid rgba(192, 57, 43, 0.3)
+    }
+
+    .btn-danger:hover {
+      background: var(--red);
+      color: #fff
+    }
+
+    .btn-success {
+      background: var(--green-light);
+      color: var(--green);
+      border: 1px solid #a7f3d0
+    }
+
+    .btn-success:hover {
+      background: var(--green);
+      color: #fff
+    }
+
+    .btn-amber {
+      background: var(--amber-light);
+      color: var(--amber);
+      border: 1px solid #fde68a
+    }
+
+    .btn-amber:hover {
+      background: var(--amber);
+      color: #fff
+    }
+
+    .btn-sm {
+      padding: 5px 11px;
+      font-size: 12px;
+      border-radius: 7px
+    }
+
+    /* PAGES */
+    .page {
+      display: none;
+      padding: 22px;
+      animation: fadeUp .3s ease;
+      position: relative
+    }
+
+    .page.active {
+      display: block
+    }
+
+    /* Task 4: Rune glow on dashboard */
+    #page-dashboard::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(ellipse at 75% 15%, rgba(192, 57, 43, 0.04) 0%, transparent 55%),
+        radial-gradient(ellipse at 25% 85%, rgba(192, 57, 43, 0.03) 0%, transparent 45%);
+    }
+
+    [data-theme=dark] #page-dashboard::before {
+      background: radial-gradient(ellipse at 75% 15%, rgba(192, 57, 43, 0.08) 0%, transparent 55%),
+        radial-gradient(ellipse at 25% 85%, rgba(192, 57, 43, 0.06) 0%, transparent 45%),
+        repeating-linear-gradient(30deg, transparent, transparent 55px, rgba(192, 57, 43, 0.007) 55px, rgba(192, 57, 43, 0.007) 56px);
+    }
+
+    #page-dashboard>* {
+      position: relative;
+      z-index: 1
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border)
+    }
+
+    [data-theme=dark] .card {
+      background: #0e0e0e;
+      border-color: #1c1c1c
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px
+    }
+
+    .ch-left h3 {
+      font-size: 14px;
+      font-weight: 800
+    }
+
+    .ch-left p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 14px
+    }
+
+    /* STATS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 18px
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: all .2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden
+    }
+
+    [data-theme=dark] .stat-card {
+      background: #0e0e0e;
+      border-color: #1c1c1c
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md)
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.5
+    }
+
+    .stat-card.blue::after,
+    .stat-card.green::after,
+    .stat-card.amber::after,
+    .stat-card.red::after {
+      opacity: 0.75
+    }
+
+    .stat-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px
+    }
+
+    .si-blue {
+      background: var(--accent-light)
+    }
+
+    .si-green {
+      background: var(--green-light)
+    }
+
+    .si-amber {
+      background: var(--amber-light)
+    }
+
+    .si-red {
+      background: var(--red-light)
+    }
+
+    .stat-change {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px
+    }
+
+    .sc-up {
+      background: var(--green-light);
+      color: var(--green)
+    }
+
+    .sc-down {
+      background: var(--red-light);
+      color: var(--red)
+    }
+
+    .stat-val {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 3px;
+      transition: all .5s
+    }
+
+    .sv-blue {
+      color: var(--accent)
+    }
+
+    .sv-green {
+      color: var(--green)
+    }
+
+    .sv-amber {
+      color: var(--amber)
+    }
+
+    .sv-red {
+      color: var(--red)
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500
+    }
+
+    /* ============================================================
+   TASK 6: CINEMATIC ANIMATED WELCOME BANNER
+   ============================================================ */
+    .welcome-banner {
+      background: linear-gradient(135deg, #1a0000 0%, #8b0000 35%, #c0392b 55%, #300000 80%, #1a0000 100%);
+      border-radius: var(--radius);
+      padding: 22px 26px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      box-shadow: 0 4px 28px rgba(192, 57, 43, 0.4);
+      position: relative;
+      overflow: hidden;
+      min-height: 90px;
+    }
+
+    /* Rune texture overlay */
+    .welcome-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(45deg, transparent, transparent 28px, rgba(255, 255, 255, 0.018) 28px, rgba(255, 255, 255, 0.018) 29px),
+        linear-gradient(135deg, rgba(0, 0, 0, 0.45), transparent 55%);
+      z-index: 0;
+    }
+
+    /* Animated banner layer */
+    .banner-anim {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    /* Blade elements */
+    .blade {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, transparent 0%, rgba(255, 220, 120, 0.5) 30%, rgba(255, 80, 60, 0.7) 60%, transparent 100%);
+      border-radius: 1px;
+      transform: rotate(-18deg) scaleY(0);
+      animation: bladeSlash 0s ease both;
+      opacity: 0;
+    }
+
+    @keyframes bladeSlash {
+      0% {
+        opacity: 0;
+        transform: translateX(80px) rotate(-18deg) scaleY(0.1)
+      }
+
+      15% {
+        opacity: 0.9;
+        transform: translateX(20px) rotate(-18deg) scaleY(1)
+      }
+
+      70% {
+        opacity: 0.3
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateX(-160px) rotate(-18deg) scaleY(0.3)
+      }
+    }
+
+    /* Fire particle */
+    .fire-p {
+      position: absolute;
+      border-radius: 50% 50% 50% 0;
+      background: radial-gradient(circle, rgba(255, 220, 80, .9) 0%, rgba(220, 60, 30, .7) 50%, transparent 100%);
+      animation: firePop 0s ease-out forwards;
+      opacity: 0;
+    }
+
+    @keyframes firePop {
+      0% {
+        opacity: 0;
+        transform: scale(0) rotate(45deg)
+      }
+
+      30% {
+        opacity: 0.9;
+        transform: scale(1.1) rotate(45deg)
+      }
+
+      70% {
+        opacity: 0.4;
+        transform: scale(0.8) rotate(45deg) translateY(-12px)
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(0.2) rotate(45deg) translateY(-28px)
+      }
+    }
+
+    .wb-left,
+    .wb-right {
+      position: relative;
+      z-index: 2
+    }
+
+    .wb-left h2 {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6)
+    }
+
+    .wb-left p {
+      font-size: 13px;
+      opacity: 0.8
+    }
+
+    .wb-right {
+      text-align: left
+    }
+
+    /* TABLE */
+    .table-wrap {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden
+    }
+
+    [data-theme=dark] .table-wrap {
+      background: #0e0e0e;
+      border-color: #1c1c1c
+    }
+
+    .table-toolbar {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+      flex-wrap: wrap
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .filter-select {
+      padding: 6px 11px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface2);
+      font-family: 'Tajawal', sans-serif;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      transition: border-color .2s
+    }
+
+    .filter-select:focus {
+      border-color: var(--accent)
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    thead tr {
+      background: var(--surface2)
+    }
+
+    [data-theme=dark] thead tr {
+      background: #131313
+    }
+
+    th {
+      padding: 10px 14px;
+      text-align: right;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: .5px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap
+    }
+
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle
+    }
+
+    [data-theme=dark] td {
+      border-bottom-color: #171717
+    }
+
+    tr:last-child td {
+      border-bottom: none
+    }
+
+    tbody tr {
+      transition: background .12s
+    }
+
+    tbody tr:hover {
+      background: var(--surface2)
+    }
+
+    [data-theme=dark] tbody tr:hover {
+      background: #131313
+    }
+
+    /* Task 2: Red selected row */
+    tbody tr.selected-row {
+      background: rgba(192, 57, 43, 0.07) !important
+    }
+
+    [data-theme=dark] tbody tr.selected-row {
+      background: rgba(192, 57, 43, 0.11) !important
+    }
+
+    .pname {
+      font-weight: 700;
+      font-size: 13px
+    }
+
+    .psku {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      font-family: monospace
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap
+    }
+
+    .bg-green {
+      background: var(--green-light);
+      color: #059669
+    }
+
+    [data-theme=dark] .bg-green {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399
+    }
+
+    .bg-red {
+      background: var(--red-light);
+      color: var(--red)
+    }
+
+    [data-theme=dark] .bg-red {
+      color: #ff6b6b
+    }
+
+    .bg-amber {
+      background: var(--amber-light);
+      color: #d97706
+    }
+
+    [data-theme=dark] .bg-amber {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24
+    }
+
+    .bg-blue {
+      background: var(--accent-light);
+      color: var(--accent)
+    }
+
+    .qbar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .qbar {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      min-width: 50px
+    }
+
+    .qbar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width .4s
+    }
+
+    .act-btns {
+      display: flex;
+      gap: 4px
+    }
+
+    .ib {
+      width: 27px;
+      height: 27px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all .15s
+    }
+
+    .ib:hover {
+      transform: scale(1.1)
+    }
+
+    .ib.edit:hover {
+      background: var(--accent-light);
+      border-color: var(--accent)
+    }
+
+    .ib.del:hover {
+      background: var(--red-light);
+      border-color: rgba(192, 57, 43, 0.4)
+    }
+
+    .table-foot {
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-muted)
+    }
+
+    .pag {
+      display: flex;
+      gap: 3px
+    }
+
+    .pbtn {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .pbtn:hover,
+    .pbtn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent)
+    }
+
+    /* PRODUCT IMAGE */
+    .prod-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0
+    }
+
+    .prod-img img {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      object-fit: cover
+    }
+
+    .prod-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .img-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      background: var(--surface2)
+    }
+
+    .img-upload-area:hover {
+      border-color: var(--accent);
+      background: var(--accent-light)
+    }
+
+    .img-preview {
+      width: 100%;
+      height: 140px;
+      border-radius: 10px;
+      object-fit: cover;
+      margin-top: 10px;
+      display: none
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px
+    }
+
+    .modal-overlay.open {
+      display: flex
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: mIn .25s ease;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border)
+    }
+
+    [data-theme=dark] .modal {
+      background: #0e0e0e;
+      border-color: #252525
+    }
+
+    [data-theme=dark] .modal::before {
+      content: '';
+      display: block;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.55), transparent)
+    }
+
+    @keyframes mIn {
+      from {
+        opacity: 0;
+        transform: scale(0.94) translateY(10px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .modal-head {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0
+    }
+
+    .modal-head h3 {
+      font-size: 16px;
+      font-weight: 800
+    }
+
+    .mcl {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .15s
+    }
+
+    .mcl:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent)
+    }
+
+    .modal-body {
+      padding: 18px 22px;
+      overflow-y: auto;
+      flex: 1
+    }
+
+    .fgrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .fgrid .full {
+      grid-column: 1/-1
+    }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .flbl {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted)
+    }
+
+    .finput,
+    .fsel,
+    .ftxt {
+      padding: 8px 11px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface2);
+      outline: none;
+      transition: all .2s;
+      width: 100%;
+    }
+
+    .finput:focus,
+    .fsel:focus,
+    .ftxt:focus {
+      border-color: var(--accent);
+      background: var(--surface)
+    }
+
+    .ftxt {
+      resize: vertical;
+      min-height: 65px
+    }
+
+    .modal-foot {
+      padding: 14px 22px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px
+    }
+
+    .detail-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 12px
+    }
+
+    .detail-item .dl {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px
+    }
+
+    .detail-item .dv {
+      font-size: 14px;
+      font-weight: 700
+    }
+
+    .detail-item.full {
+      grid-column: 1/-1
+    }
+
+    .detail-img {
+      width: 100%;
+      height: 180px;
+      border-radius: 12px;
+      object-fit: cover;
+      margin-bottom: 14px;
+      border: 1px solid var(--border)
+    }
+
+    /* TXN */
+    .txn-type-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px
+    }
+
+    .txn-type-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 9px;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      transition: all .2s;
+      text-align: center
+    }
+
+    .txn-type-btn.in.selected {
+      border-color: var(--green);
+      background: var(--green-light);
+      color: var(--green)
+    }
+
+    .txn-type-btn.out.selected {
+      border-color: var(--red);
+      background: var(--red-light);
+      color: var(--red)
+    }
+
+    /* ACTIVITY */
+    .act-list {
+      display: flex;
+      flex-direction: column
+    }
+
+    .act-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px
+    }
+
+    .act-item:last-child {
+      border-bottom: none
+    }
+
+    .adot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0
+    }
+
+    .adot.add {
+      background: var(--green)
+    }
+
+    .adot.edit {
+      background: var(--accent)
+    }
+
+    .adot.del {
+      background: var(--red)
+    }
+
+    .adot.txn {
+      background: var(--amber)
+    }
+
+    .atext {
+      flex: 1;
+      line-height: 1.5
+    }
+
+    .atime {
+      font-size: 10px;
+      color: var(--text-light);
+      white-space: nowrap
+    }
+
+    /* TOP PRODUCTS */
+    .tp-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .tp-item:last-child {
+      border-bottom: none
+    }
+
+    .tp-rank {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .tp-rank.g {
+      background: var(--amber-light);
+      color: var(--amber)
+    }
+
+    .tp-rank.s {
+      background: var(--surface3);
+      color: var(--text-muted)
+    }
+
+    .tp-rank.b {
+      background: #fff7ed;
+      color: #c2410c
+    }
+
+    [data-theme=dark] .tp-rank.b {
+      background: rgba(194, 65, 12, 0.15)
+    }
+
+    .tp-info {
+      flex: 1
+    }
+
+    .tpn {
+      font-size: 12px;
+      font-weight: 700
+    }
+
+    .tpc {
+      font-size: 10px;
+      color: var(--text-muted)
+    }
+
+    .tpq {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted)
+    }
+
+    /* ALERTS */
+    .alert-item {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+      transition: all .15s
+    }
+
+    [data-theme=dark] .alert-item {
+      background: #0e0e0e;
+      border-color: #1c1c1c
+    }
+
+    .alert-item:hover {
+      transform: translateX(-2px)
+    }
+
+    .alert-item.crit {
+      border-right: 3px solid var(--red)
+    }
+
+    .alert-item.warn {
+      border-right: 3px solid var(--amber)
+    }
+
+    .aicon {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0
+    }
+
+    .alert-item.crit .aicon {
+      background: var(--red-light)
+    }
+
+    .alert-item.warn .aicon {
+      background: var(--amber-light)
+    }
+
+    .ainfo {
+      flex: 1
+    }
+
+    .aname {
+      font-weight: 700;
+      font-size: 13px
+    }
+
+    .adetail {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px
+    }
+
+    .aqty {
+      font-size: 20px;
+      font-weight: 900
+    }
+
+    .alert-item.crit .aqty {
+      color: var(--red)
+    }
+
+    .alert-item.warn .aqty {
+      color: var(--amber)
+    }
+
+    /* REPORTS */
+    .rep-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px
+    }
+
+    .rep-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    [data-theme=dark] .rep-card {
+      background: #0e0e0e;
+      border-color: #1c1c1c
+    }
+
+    .rep-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent)
+    }
+
+    .rep-card .ri {
+      font-size: 30px;
+      margin-bottom: 8px
+    }
+
+    .rep-card h4 {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 5px
+    }
+
+    .rep-card p {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5
+    }
+
+    /* TXN LIST */
+    .txn-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px
+    }
+
+    .txn-item:last-child {
+      border-bottom: none
+    }
+
+    .txn-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0
+    }
+
+    .txn-in {
+      background: var(--green-light);
+      color: var(--green)
+    }
+
+    .txn-out {
+      background: var(--red-light);
+      color: var(--red)
+    }
+
+    .txn-info {
+      flex: 1
+    }
+
+    .txn-name {
+      font-weight: 700
+    }
+
+    .txn-note {
+      color: var(--text-muted);
+      margin-top: 1px
+    }
+
+    .txn-qty {
+      font-weight: 700;
+      font-size: 14px
+    }
+
+    .txn-qty.in {
+      color: var(--green)
+    }
+
+    .txn-qty.out {
+      color: var(--red)
+    }
+
+    .txn-time {
+      font-size: 10px;
+      color: var(--text-light)
+    }
+
+    /* SUM GRID */
+    .sum-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px
+    }
+
+    .sum-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 13px;
+      border: 1px solid var(--border)
+    }
+
+    .sum-item .sl {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 3px
+    }
+
+    .sum-item .sv {
+      font-size: 18px;
+      font-weight: 900
+    }
+
+    /* BULK */
+    .bulk-bar {
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 18px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .bulk-bar.show {
+      display: flex
+    }
+
+    /* Task 8: LOADING SKELETON */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: skelAnim 1.4s infinite;
+      border-radius: 8px;
+    }
+
+    @keyframes skelAnim {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    .loading-spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(192, 57, 43, 0.15);
+      border-top-color: #c0392b;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 40px auto;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* Task 10: IMPROVED TOASTS */
+    .toast-cont {
+      position: fixed;
+      bottom: 22px;
+      left: 22px;
+      z-index: 9998;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .toast {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      animation: tIn .35s cubic-bezier(.175, .885, .32, 1.275);
+      min-width: 210px;
+      max-width: 300px;
+      border-right: 3px solid;
+      backdrop-filter: blur(12px);
+    }
+
+    @keyframes tIn {
+      from {
+        opacity: 0;
+        transform: translateX(-18px) scale(0.95)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .toast.success {
+      background: rgba(5, 15, 5, 0.95);
+      color: #4ade80;
+      border-color: #166534
+    }
+
+    .toast.error {
+      background: rgba(15, 3, 3, 0.95);
+      color: #ff6b6b;
+      border-color: #c0392b
+    }
+
+    .toast.info {
+      background: rgba(3, 5, 15, 0.95);
+      color: #93c5fd;
+      border-color: #1e40af
+    }
+
+    .toast.warn {
+      background: rgba(15, 12, 3, 0.95);
+      color: #fbbf24;
+      border-color: #92400e
+    }
+
+    /* Task 9: EMPTY STATES */
+    .empty {
+      text-align: center;
+      padding: 52px 20px;
+      color: var(--text-muted)
+    }
+
+    .empty .ei {
+      font-size: 50px;
+      margin-bottom: 14px;
+      opacity: 0.55
+    }
+
+    .empty h3 {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: var(--text)
+    }
+
+    .empty p {
+      font-size: 12px;
+      line-height: 1.7;
+      max-width: 250px;
+      margin: 0 auto
+    }
+
+    .empty .empty-cta {
+      margin-top: 16px
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 10px
+    }
+
+    [data-theme=dark] ::-webkit-scrollbar-thumb {
+      background: #222
+    }
+
+    @media print {
+
+      .sidebar,
+      .topbar,
+      .act-btns,
+      .btn,
+      .table-toolbar .btn {
+        display: none !important
+      }
+
+      .main {
+        margin-right: 0
+      }
+    }
+
+    /* =====================================================
+   RUNE OVERLAY — STRENGTHENED for cinematic effect
+   ===================================================== */
+    .rune-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .rune-overlay svg {
+      width: 100%;
+      height: 100%;
+      opacity: 1
+    }
+
+    /* Dashboard rune overlay — much stronger */
+    #page-dashboard .rune-overlay {
+      opacity: 0.12
+    }
+
+    [data-theme=dark] #page-dashboard .rune-overlay {
+      opacity: 0.45
+    }
+
+    /* Sidebar rune */
+    .sidebar .rune-overlay {
+      opacity: 0.10
+    }
+
+    [data-theme=dark] .sidebar .rune-overlay {
+      opacity: 0.40
+    }
+
+    /* Cards rune */
+    .card.rune-card {
+      position: relative;
+      overflow: hidden
+    }
+
+    .card.rune-card .rune-overlay {
+      opacity: 0.07
+    }
+
+    [data-theme=dark] .card.rune-card .rune-overlay {
+      opacity: 0.28
+    }
+
+    /* Welcome banner rune — strong */
+    .welcome-banner .rune-overlay {
+      opacity: 0.30
+    }
+
+    /* === DARK MODE CINEMATIC ENHANCEMENTS === */
+    /* Sidebar red left glow edge */
+    [data-theme=dark] .sidebar {
+      background: linear-gradient(180deg, #060606 0%, #0a0000 50%, #060606 100%) !important;
+      box-shadow: -4px 0 40px rgba(192, 57, 43, 0.15) inset, 4px 0 0 rgba(192, 57, 43, 0.06);
+    }
+
+    /* Cards — dark engraved look */
+    [data-theme=dark] .card {
+      background: linear-gradient(135deg, #0d0d0d 0%, #0a0a0a 100%) !important;
+      border-color: #1e1e1e !important;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(192, 57, 43, 0.04) !important;
+    }
+
+    [data-theme=dark] .card:hover {
+      border-color: rgba(192, 57, 43, 0.2) !important;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(192, 57, 43, 0.12) !important;
+    }
+
+    /* Stat cards dark glow */
+    [data-theme=dark] .stat-card {
+      background: linear-gradient(135deg, #0d0d0d 0%, #0a0a0a 100%) !important;
+      border-color: #1e1e1e !important;
+    }
+
+    [data-theme=dark] .stat-card::after {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #c0392b, transparent);
+      box-shadow: 0 0 12px rgba(192, 57, 43, 0.6);
+      opacity: 1;
+    }
+
+    [data-theme=dark] .stat-card:hover {
+      border-color: rgba(192, 57, 43, 0.25) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.9), 0 0 20px rgba(192, 57, 43, 0.08) !important;
+    }
+
+    /* Top bar dark */
+    [data-theme=dark] .topbar {
+      background: linear-gradient(90deg, #060606, #0a0000 30%, #060606) !important;
+      border-bottom: 1px solid #181818 !important;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(192, 57, 43, 0.08) !important;
+    }
+
+    /* Welcome banner — stronger fire gradient */
+    [data-theme=dark] .welcome-banner {
+      background: linear-gradient(135deg, #0d0000 0%, #3d0000 25%, #8b0000 50%, #c0392b 65%, #3d0000 80%, #0d0000 100%) !important;
+      box-shadow: 0 4px 40px rgba(192, 57, 43, 0.6), 0 0 80px rgba(192, 57, 43, 0.15) !important;
+      border: 1px solid rgba(192, 57, 43, 0.35) !important;
+    }
+
+    /* Table dark */
+    [data-theme=dark] .table-wrap {
+      background: #080808 !important;
+      border-color: #181818 !important;
+    }
+
+    [data-theme=dark] .table-wrap::before {
+      content: '';
+      display: block;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.4), transparent);
+    }
+
+    /* Logo area red glow in dark */
+    [data-theme=dark] .logo-area {
+      background: linear-gradient(135deg, rgba(192, 57, 43, 0.06), transparent);
+    }
+
+    [data-theme=dark] .logo-area::after {
+      background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.8), transparent) !important;
+      opacity: 1;
+    }
+
+    /* Nav active item red engraved */
+    [data-theme=dark] .nav-item.active {
+      background: linear-gradient(90deg, rgba(192, 57, 43, 0.18), rgba(192, 57, 43, 0.06)) !important;
+      border-right: 3px solid #c0392b !important;
+      color: #ff6b6b !important;
+      box-shadow: inset 0 0 20px rgba(192, 57, 43, 0.08);
+    }
+
+    /* Modal dark engraved */
+    [data-theme=dark] .modal {
+      background: linear-gradient(135deg, #0a0a0a, #0d0000 100%) !important;
+      border-color: rgba(192, 57, 43, 0.2) !important;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.95), 0 0 60px rgba(192, 57, 43, 0.08) !important;
+    }
+
+    /* Setting cards dark */
+    [data-theme=dark] .setting-card {
+      background: linear-gradient(135deg, #0d0d0d, #0a0a0a) !important;
+      border-color: #1e1e1e !important;
+    }
+
+    /* Alert items dark */
+    [data-theme=dark] .alert-item {
+      background: linear-gradient(135deg, #0d0d0d, #0a0a0a) !important;
+      border-color: #1e1e1e !important;
+    }
+
+    [data-theme=dark] .alert-item.crit {
+      border-right: 3px solid var(--red) !important;
+      box-shadow: -4px 0 20px rgba(192, 57, 43, 0.15) !important;
+    }
+
+    /* =====================================================
+   CHARACTER MURAL — engraved wall art (stronger)
+   ===================================================== */
+    .mural-layer {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      width: 340px;
+      height: calc(100vh - 60px);
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .mural-layer svg {
+      width: 100%;
+      height: 100%;
+      opacity: 0.04;
+      mix-blend-mode: multiply;
+      transition: opacity 0.5s;
+    }
+
+    [data-theme=dark] .mural-layer svg {
+      opacity: 0.18;
+      mix-blend-mode: screen;
+      filter: drop-shadow(0 0 30px rgba(192, 57, 43, 0.4));
+    }
+
+    /* =====================================================
+   SETTINGS PAGE
+   ===================================================== */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 18px
+    }
+
+    .setting-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border)
+    }
+
+    [data-theme=dark] .setting-card {
+      background: #0e0e0e;
+      border-color: #1c1c1c
+    }
+
+    .setting-card h4 {
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 10px
+    }
+
+    .setting-row label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600
+    }
+
+    .setting-row select,
+    .setting-row input[type=text] {
+      padding: 6px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface2);
+      font-family: 'Tajawal', sans-serif;
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      min-width: 120px;
+      transition: border-color .2s
+    }
+
+    .setting-row select:focus,
+    .setting-row input[type=text]:focus {
+      border-color: var(--accent)
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--border);
+      border-radius: 24px;
+      transition: .3s
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .3s
+    }
+
+    .toggle-switch input:checked+.toggle-slider {
+      background: var(--accent)
+    }
+
+    .toggle-switch input:checked+.toggle-slider::before {
+      transform: translateX(18px)
+    }
+
+    .avatar-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px
+    }
+
+    .avatar-opt {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all .2s;
+      background: var(--surface2)
+    }
+
+    .avatar-opt:hover,
+    .avatar-opt.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light)
+    }
+
+    /* ABOUT / PRIVACY / SUPPORT modals */
+    .info-modal-body {
+      padding: 20px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text-muted)
+    }
+
+    .info-modal-body h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px
+    }
+
+    .info-modal-body h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 14px 0 6px
+    }
+
+    .info-modal-body p {
+      margin-bottom: 10px
+    }
+
+    .info-modal-body ul {
+      padding-right: 18px;
+      margin-bottom: 10px
+    }
+
+    .info-modal-body ul li {
+      margin-bottom: 4px
+    }
+
+    /* ROLE badge */
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700
+    }
+
+    .role-admin {
+      background: rgba(192, 57, 43, 0.15);
+      color: #ff6b6b;
+      border: 1px solid rgba(192, 57, 43, 0.3)
+    }
+
+    .role-employee {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3)
+    }
+
+    .role-viewer {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.25)
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================================
+     GLOBAL SVG DEFS — Logo + Rune Pattern + Mural
+     ============================================================ -->
+  <svg style="display:none" id="svg-defs">
+    <defs>
+      <!-- TASK 3: UPGRADED 4U LOGO — strong circular emblem -->
+      <symbol id="logo-4u" viewBox="0 0 80 80">
+        <!-- Outer glow ring -->
+        <circle cx="40" cy="40" r="38" fill="none" stroke="#c0392b" stroke-width="2" opacity="0.8" />
+        <!-- Inner ring -->
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#c0392b" stroke-width="0.6" opacity="0.4" />
+        <!-- Dark fill inside -->
+        <circle cx="40" cy="40" r="33" fill="rgba(0,0,0,0.4)" />
+        <!-- Number 4 — blade vertical stroke (tapered sharp polygon) -->
+        <polygon points="28.5,13 31.5,13 33,50 27,50" fill="#c0392b" />
+        <!-- Blade tip — sharp point -->
+        <polygon points="27,50 33,50 30,63" fill="#c0392b" />
+        <!-- Blade center highlight line (engraved look) -->
+        <line x1="30" y1="15" x2="30" y2="61" stroke="rgba(255,180,160,0.45)" stroke-width="0.7" />
+        <!-- Engrave marks on blade -->
+        <line x1="28" y1="22" x2="32" y2="22" stroke="rgba(255,120,100,0.5)" stroke-width="0.8" />
+        <line x1="28" y1="30" x2="32" y2="30" stroke="rgba(255,120,100,0.5)" stroke-width="0.8" />
+        <line x1="28" y1="38" x2="32" y2="38" stroke="rgba(255,120,100,0.5)" stroke-width="0.8" />
+        <line x1="28" y1="46" x2="32" y2="46" stroke="rgba(255,120,100,0.5)" stroke-width="0.8" />
+        <!-- Crossguard (horizontal bar of 4) -->
+        <rect x="15" y="33.5" width="20" height="3" rx="1.5" fill="#c0392b" />
+        <!-- Horizontal stroke of 4 -->
+        <line x1="15" y1="25" x2="15" y2="34" stroke="#c0392b" stroke-width="3" stroke-linecap="round" />
+        <!-- Letter U — strong metallic -->
+        <path d="M43 14 L43 47 Q43 61 55 61 Q67 61 67 47 L67 14" fill="none" stroke="#e8e8e8" stroke-width="3.5"
+          stroke-linecap="round" />
+        <!-- U metallic highlight -->
+        <path d="M43 14 L43 47 Q43 61 55 61 Q67 61 67 47 L67 14" fill="none" stroke="rgba(255,255,255,0.2)"
+          stroke-width="1" stroke-linecap="round" />
+        <!-- U bottom shield arc -->
+        <path d="M46 55 Q55 66 64 55" fill="none" stroke="#c0392b" stroke-width="1.8" opacity="0.8" />
+        <!-- U armor notches -->
+        <line x1="43" y1="20" x2="46" y2="20" stroke="#c0392b" stroke-width="1.5" opacity="0.7" />
+        <line x1="43" y1="30" x2="46" y2="30" stroke="#c0392b" stroke-width="1.5" opacity="0.7" />
+        <line x1="64" y1="20" x2="67" y2="20" stroke="#c0392b" stroke-width="1.5" opacity="0.7" />
+        <line x1="64" y1="30" x2="67" y2="30" stroke="#c0392b" stroke-width="1.5" opacity="0.7" />
+      </symbol>
+
+      <!-- TASK 1: RUNE PATTERN — visible engraved geometry -->
+      <symbol id="rune-pattern" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+        <!-- Hexagonal engraved grid pattern -->
+        <g stroke="#c0392b" stroke-width="0.8" fill="none" opacity="1">
+          <!-- Large hexagons -->
+          <polygon points="100,10 160,45 160,115 100,150 40,115 40,45" opacity="0.6" />
+          <polygon points="100,30 145,55 145,105 100,130 55,105 55,55" opacity="0.4" />
+          <!-- Rune-like vertical lines -->
+          <line x1="100" y1="10" x2="100" y2="150" opacity="0.3" />
+          <line x1="70" y1="27" x2="70" y2="133" opacity="0.2" />
+          <line x1="130" y1="27" x2="130" y2="133" opacity="0.2" />
+          <!-- Rune cross marks -->
+          <line x1="85" y1="70" x2="115" y2="70" opacity="0.4" />
+          <line x1="85" y1="90" x2="115" y2="90" opacity="0.4" />
+          <line x1="85" y1="110" x2="115" y2="110" opacity="0.4" />
+          <!-- Corner accents -->
+          <path d="M40,45 L20,40 L20,10 L40,10" opacity="0.25" />
+          <path d="M160,45 L180,40 L180,10 L160,10" opacity="0.25" />
+          <path d="M40,115 L20,120 L20,160 L40,160" opacity="0.25" />
+          <path d="M160,115 L180,120 L180,160 L160,160" opacity="0.25" />
+          <!-- Small rune marks -->
+          <rect x="95" y="65" width="10" height="3" rx="1" opacity="0.5" />
+          <rect x="95" y="107" width="10" height="3" rx="1" opacity="0.5" />
+          <!-- Sword-like vertical accent -->
+          <line x1="100" y1="30" x2="100" y2="130" stroke-width="1.5" opacity="0.35" />
+          <polygon points="98,125 102,125 100,135" opacity="0.45" />
+          <!-- Top diamond -->
+          <polygon points="100,15 105,25 100,35 95,25" opacity="0.4" />
+        </g>
+      </symbol>
+
+      <!-- TASK 2: WARRIOR MURAL SILHOUETTE — engraved wall art -->
+      <symbol id="mural-warrior" viewBox="0 0 300 600" preserveAspectRatio="xMidYMid meet">
+        <g fill="none" stroke="#c0392b" stroke-width="1.5" opacity="0.9">
+          <!-- Head -->
+          <ellipse cx="150" cy="60" rx="28" ry="32" />
+          <!-- Crown/helmet top -->
+          <path d="M130,42 L125,20 L150,30 L175,20 L170,42" />
+          <!-- Helmet crest -->
+          <line x1="150" y1="28" x2="150" y2="5" />
+          <line x1="140" y1="12" x2="160" y2="12" />
+          <!-- Face marks (Kratos-like) -->
+          <line x1="138" y1="55" x2="162" y2="55" stroke-width="2" />
+          <line x1="135" y1="62" x2="145" y2="62" />
+          <line x1="155" y1="62" x2="165" y2="62" />
+          <!-- Neck -->
+          <line x1="142" y1="90" x2="142" y2="110" />
+          <line x1="158" y1="90" x2="158" y2="110" />
+          <!-- Shoulders — pauldrons -->
+          <path d="M142,110 L90,120 L80,150 L100,165 L142,155" />
+          <path d="M158,110 L210,120 L220,150 L200,165 L158,155" />
+          <!-- Shoulder armor plates -->
+          <line x1="85" y1="130" x2="95" y2="135" />
+          <line x1="82" y1="140" x2="93" y2="145" />
+          <line x1="215" y1="130" x2="205" y2="135" />
+          <line x1="218" y1="140" x2="207" y2="145" />
+          <!-- Chest armor -->
+          <path d="M100,165 L100,280 L150,295 L200,280 L200,165" stroke-width="2" />
+          <!-- Chest center line -->
+          <line x1="150" y1="160" x2="150" y2="295" stroke-width="1" />
+          <!-- Chest horizontal plates -->
+          <line x1="100" y1="185" x2="200" y2="185" opacity="0.6" />
+          <line x1="100" y1="205" x2="200" y2="205" opacity="0.6" />
+          <line x1="100" y1="225" x2="200" y2="225" opacity="0.6" />
+          <line x1="100" y1="245" x2="200" y2="245" opacity="0.6" />
+          <!-- Chest rune circle -->
+          <circle cx="150" cy="215" r="18" opacity="0.5" />
+          <circle cx="150" cy="215" r="10" opacity="0.4" />
+          <!-- Belt -->
+          <rect x="100" y="275" width="100" height="18" rx="4" />
+          <!-- Belt buckle -->
+          <rect x="140" y="276" width="20" height="16" rx="2" />
+          <!-- Hips/waist -->
+          <path d="M100,293 L95,340 L205,340 L200,293" />
+          <!-- Left arm -->
+          <path d="M90,120 L60,180 L50,240 L60,310 L80,340" />
+          <!-- Left arm armor -->
+          <line x1="55" y1="200" x2="70" y2="198" />
+          <line x1="52" y1="220" x2="67" y2="218" />
+          <line x1="50" y1="240" x2="65" y2="238" />
+          <!-- Right arm -->
+          <path d="M210,120 L240,180 L250,240 L240,310 L220,340" />
+          <!-- Right arm armor -->
+          <line x1="245" y1="200" x2="230" y2="198" />
+          <line x1="248" y1="220" x2="233" y2="218" />
+          <line x1="250" y1="240" x2="235" y2="238" />
+          <!-- Left hand/blade of chaos chain -->
+          <path d="M60,310 L40,370 L20,390" />
+          <path d="M20,390 L10,380 L0,400 L15,415 L30,410" />
+          <!-- Right hand/blade -->
+          <path d="M240,310 L260,370 L280,390" />
+          <path d="M280,390 L290,380 L300,400 L285,415 L270,410" />
+          <!-- Left blade shape -->
+          <polygon points="10,380 0,400 30,410 25,390" stroke-width="1.5" />
+          <!-- Right blade shape -->
+          <polygon points="290,380 300,400 270,410 275,390" stroke-width="1.5" />
+          <!-- Legs -->
+          <path d="M110,340 L105,450 L115,550 L135,555 L145,460 L150,340" />
+          <path d="M190,340 L195,450 L185,550 L165,555 L155,460 L150,340" />
+          <!-- Leg armor plates -->
+          <line x1="105" y1="380" x2="115" y2="382" />
+          <line x1="104" y1="410" x2="114" y2="412" />
+          <line x1="195" y1="380" x2="185" y2="382" />
+          <line x1="196" y1="410" x2="186" y2="412" />
+          <!-- Feet/boots -->
+          <path d="M115,550 L135,555 L145,570 L140,580 L110,580 L105,565 L115,550" />
+          <path d="M185,550 L165,555 L155,570 L160,580 L190,580 L195,565 L185,550" />
+          <!-- Boots horizontal lines -->
+          <line x1="108" y1="562" x2="143" y2="562" opacity="0.6" />
+          <line x1="157" y1="562" x2="192" y2="562" opacity="0.6" />
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- TASK 5: CINEMATIC SPLASH SCREEN with splatter -->
+  <div id="splash-screen">
+    <!-- Splatter particles injected by JS -->
+    <div id="splash-splatters"></div>
+    <div class="splash-content">
+      <div class="splash-emblem">
+        <svg viewBox="0 0 80 80">
+          <use href="#logo-4u" />
+        </svg>
+      </div>
+      <div class="splash-title">4U</div>
+      <div class="splash-bar">
+        <div class="splash-bar-fill"></div>
+      </div>
+      <div class="splash-subtitle">Warehouse Management System</div>
+      <div class="splash-tagline">نظام إدارة المستودع المتكامل</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+     TASK 4: LOGIN SCREEN
+     ============================================================ -->
+  <div id="login-screen">
+    <div class="login-box">
+      <div class="login-logo">
+        <!-- TASK 7: 4U Logo -->
+        <div class="login-emblem">
+          <svg viewBox="0 0 80 80">
+            <use href="#logo-4u" />
+          </svg>
+        </div>
+        <!-- TASK 6: Rebranded to 4U -->
+        <h1>4U</h1>
+        <p>نظام إدارة المستودع المتكامل</p>
+      </div>
+      <div class="lfield"><label>اسم المستخدم</label><input type="text" id="l-user" placeholder="admin" value="admin">
+      </div>
+      <div class="lfield"><label>كلمة المرور</label><input type="password" id="l-pass" placeholder="••••••"
+          onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="login-err" id="login-err">❌ بيانات غير صحيحة</div>
+      <div class="login-hint">👤 admin &nbsp;|&nbsp; 🔑 1234</div>
+      <button class="login-btn" onclick="doLogin()">دخول</button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none">
+
+    <!-- TASK 2: CHARACTER MURAL — fixed decorative layer on left side -->
+    <div class="mural-layer" id="mural-layer">
+      <svg viewBox="0 0 300 600" preserveAspectRatio="xMidYMid meet">
+        <use href="#mural-warrior" />
+      </svg>
+    </div>
+    <aside class="sidebar">
+      <!-- TASK 1: Rune overlay on sidebar -->
+      <div class="rune-overlay"><svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+          <use href="#rune-pattern" />
+        </svg></div>
+      <div class="logo-area">
+        <!-- TASK 7: 4U Logo in sidebar -->
+        <div class="logo-icon">
+          <svg viewBox="0 0 80 80">
+            <use href="#logo-4u" />
+          </svg>
+        </div>
+        <div class="logo-text">
+          <!-- TASK 6: Rebranded -->
+          <h1>4U</h1>
+          <span>Warehouse System</span>
+        </div>
+        <span class="logo-badge">Pro</span>
+      </div>
+      <nav class="nav">
+        <div class="nav-label">الرئيسية</div>
+        <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="ni">🏠</span>لوحة التحكم</div>
+        <div class="nav-item" onclick="showPage('products',this)"><span class="ni">📋</span>المنتجات<span
+            class="nbadge blue" id="nb-products">0</span></div>
+        <div class="nav-label">العمليات</div>
+        <div class="nav-item" onclick="showPage('transactions',this)"><span class="ni">🔄</span>حركة المخزون</div>
+        <div class="nav-label">التقارير</div>
+        <div class="nav-item" onclick="showPage('alerts',this)"><span class="ni">🔔</span>التنبيهات<span
+            class="nbadge red" id="nb-alerts" style="display:none">0</span></div>
+        <div class="nav-item" onclick="showPage('reports',this)"><span class="ni">📊</span>التقارير</div>
+        <div class="nav-label">النظام</div>
+        <div class="nav-item" onclick="showPage('settings',this)"><span class="ni">⚙️</span>الإعدادات</div>
+        <div class="nav-item" id="nav-activity" onclick="showPage('actlog',this)"><span class="ni">📜</span>سجل النشاط
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="uavatar" id="uavatar">م</div>
+          <div>
+            <div class="uname" id="uname">مدير</div>
+            <div class="urole" id="urole-label">مدير المستودع</div>
+          </div>
+          <button class="logout-btn" onclick="doLogout()" title="تسجيل الخروج">🚪</button>
+        </div>
+        <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;padding:6px 0">
+          <span style="font-size:10px;color:var(--text-light);cursor:pointer;transition:color .2s"
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-light)'"
+            onclick="openInfoModal('about')">حول</span>
+          <span style="font-size:10px;color:var(--text-light);cursor:pointer;transition:color .2s"
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-light)'"
+            onclick="openInfoModal('privacy')">الخصوصية</span>
+          <span style="font-size:10px;color:var(--text-light);cursor:pointer;transition:color .2s"
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-light)'"
+            onclick="openInfoModal('support')">الدعم</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="tb-left">
+          <h2 id="page-title">لوحة التحكم</h2>
+          <p id="page-sub">نظرة عامة على المستودع</p>
+        </div>
+        <div class="tb-right">
+          <div class="searchbox"><span>🔍</span><input type="text" id="gsearch" placeholder="بحث سريع..."
+              oninput="gSearch(this.value)"></div>
+          <button class="icon-btn-top" onclick="toggleTheme()" id="theme-btn">🌙</button>
+          <button class="btn btn-primary" onclick="openAddModal()">＋ إضافة منتج</button>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <!-- TASK 1: Rune background overlay -->
+        <div class="rune-overlay"
+          style="position:fixed;top:0;right:var(--sw);left:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;opacity:0.08">
+          <svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+            <use href="#rune-pattern" x="0" y="0" width="200" height="200" />
+            <use href="#rune-pattern" x="200" y="0" width="200" height="200" />
+            <use href="#rune-pattern" x="0" y="200" width="200" height="200" />
+            <use href="#rune-pattern" x="200" y="200" width="200" height="200" />
+          </svg>
+        </div>
+        <div class="welcome-banner">
+          <!-- TASK 1: Rune inside banner -->
+          <div class="rune-overlay"><svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice">
+              <use href="#rune-pattern" />
+            </svg></div>
+          <!-- Animated blade/fire layer Task 6 -->
+          <div class="banner-anim" id="banner-anim"></div>
+          <div class="wb-left">
+            <h2 id="wb-greeting">عليمرحباً! 👋</h2>
+            <p id="wb-date">اليوم</p>
+          </div>
+          <!-- Task 1: 12-hour time + country -->
+          <div class="wb-right">
+            <div class="wb-date-label">الوقت الحالي — العراق</div>
+            <div class="wb-time-wrap">
+              <div class="wb-time"><span id="wb-time">12:00</span><span class="wb-ampm" id="wb-ampm">ص</span></div>
+              <div class="wb-country">Iraq / العراق</div>
+            </div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card blue" onclick="showPage('products',document.querySelectorAll('.nav-item')[1])">
+            <div class="stat-top">
+              <div class="stat-icon si-blue">📦</div><span class="stat-change sc-up">↑ مباشر</span>
+            </div>
+            <div class="stat-val sv-blue" id="sv-total">0</div>
+            <div class="stat-lbl">إجمالي المنتجات</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-top">
+              <div class="stat-icon si-green">✅</div><span class="stat-change sc-up" id="sc-instock">—</span>
+            </div>
+            <div class="stat-val sv-green" id="sv-instock">0</div>
+            <div class="stat-lbl">متوفر في المخزن</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-top">
+              <div class="stat-icon si-amber">💰</div><span class="stat-change sc-up">ر.س</span>
+            </div>
+            <div class="stat-val sv-amber" id="sv-value">0</div>
+            <div class="stat-lbl">القيمة الإجمالية</div>
+          </div>
+          <div class="stat-card red" onclick="showPage('alerts',document.querySelectorAll('.nav-item')[3])">
+            <div class="stat-top">
+              <div class="stat-icon si-red">⚠️</div><span class="stat-change sc-down">تنبيه</span>
+            </div>
+            <div class="stat-val sv-red" id="sv-low">0</div>
+            <div class="stat-lbl">كميات منخفضة</div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="ch-left">
+                <h3>توزيع المخزون حسب الفئة</h3>
+                <p>كمية كل فئة</p>
+              </div>
+            </div>
+            <canvas id="chart-cat" height="200"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="ch-left">
+                <h3>أعلى 5 منتجات</h3>
+                <p>حسب الكمية</p>
+              </div>
+            </div>
+            <div id="top-list"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="ch-left">
+                <h3>حالة المخزون</h3>
+                <p>توزيع الحالات</p>
+              </div>
+            </div>
+            <canvas id="chart-status" height="180"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="ch-left">
+                <h3>سجل النشاطات</h3>
+                <p>آخر 10 عمليات</p>
+              </div><button class="btn btn-ghost btn-sm" onclick="clearAct()">مسح</button>
+            </div>
+            <div class="act-list" id="act-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="page" id="page-products">
+        <div class="bulk-bar" id="bulk-bar">
+          <span id="bulk-count">0 منتج محدد</span>
+          <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑️ حذف المحددة</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearSelection()">إلغاء التحديد</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="filter-row">
+              <div class="searchbox" style="width:180px"><span>🔍</span><input type="text" id="psearch"
+                  placeholder="بحث..." oninput="renderTable()"></div>
+              <select class="filter-select" id="fcat" onchange="renderTable()">
+                <option value="">كل الفئات</option>
+              </select>
+              <select class="filter-select" id="fstatus" onchange="renderTable()">
+                <option value="">كل الحالات</option>
+                <option>متوفر</option>
+                <option>منخفض</option>
+                <option>نفذ</option>
+              </select>
+              <select class="filter-select" id="fsort" onchange="renderTable()">
+                <option value="date">الأحدث</option>
+                <option value="name">الاسم</option>
+                <option value="qty-asc">الكمية ↑</option>
+                <option value="qty-desc">الكمية ↓</option>
+                <option value="price-desc">السعر ↓</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:7px">
+              <button class="btn btn-success btn-sm" onclick="exportCSV()">⬇ CSV</button>
+              <button class="btn btn-amber btn-sm" onclick="window.print()">🖨️</button>
+              <button class="btn btn-primary btn-sm" onclick="openAddModal()">＋ إضافة</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)"
+                      style="cursor:pointer"></th>
+                  <th>#</th>
+                  <th>المنتج</th>
+                  <th>الفئة</th>
+                  <th>الكمية</th>
+                  <th>السعر</th>
+                  <th>القيمة</th>
+                  <th>الحالة</th>
+                  <th>التاريخ</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="ptbody"></tbody>
+            </table>
+          </div>
+          <div class="table-foot">
+            <span id="tcount">0 منتج</span>
+            <div class="pag" id="pag"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS -->
+      <div class="page" id="page-transactions">
+        <div class="grid-3" style="margin-bottom:16px">
+          <div class="card" style="text-align:center;cursor:pointer" onclick="openTxnModal('in')">
+            <div style="font-size:28px;margin-bottom:8px">📥</div>
+            <div style="font-weight:800;font-size:14px;color:var(--green)">إضافة للمخزون</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">استلام بضاعة جديدة</div>
+          </div>
+          <div class="card" style="text-align:center;cursor:pointer" onclick="openTxnModal('out')">
+            <div style="font-size:28px;margin-bottom:8px">📤</div>
+            <div style="font-weight:800;font-size:14px;color:var(--red)">سحب من المخزون</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">صرف أو بيع منتج</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div style="font-size:28px;margin-bottom:8px">📊</div>
+            <div style="font-weight:800;font-size:14px" id="txn-total-stat">0 عملية</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">إجمالي الحركات</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="ch-left">
+              <h3>سجل حركة المخزون</h3>
+              <p>جميع عمليات الإضافة والسحب</p>
+            </div>
+            <div style="display:flex;gap:7px">
+              <select class="filter-select" id="ftxn-type" onchange="renderTxn()">
+                <option value="">كل العمليات</option>
+                <option value="in">إضافة</option>
+                <option value="out">سحب</option>
+              </select>
+              <button class="btn btn-ghost btn-sm"
+                onclick="if(confirm('مسح كل الحركات؟')){transactions=[];renderTxn();toast('تم مسح السجل','info')}">مسح</button>
+            </div>
+          </div>
+          <div id="txn-list"></div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="page" id="page-alerts">
+        <div id="alerts-cont"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="settings-grid">
+          <div class="setting-card">
+            <h4>🎨 المظهر والعرض</h4>
+            <div class="setting-row"><label>الوضع الليلي</label><label class="toggle-switch"><input type="checkbox"
+                  id="s-dark" onchange="toggleTheme()"><span class="toggle-slider"></span></label></div>
+            <div class="setting-row"><label>تنسيق الوقت</label><select id="s-timefmt" onchange="applySettings()">
+                <option value="12">12 ساعة (ص/م)</option>
+                <option value="24">24 ساعة</option>
+              </select></div>
+            <div class="setting-row"><label>اللغة</label><select id="s-lang">
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+              </select></div>
+          </div>
+          <div class="setting-card">
+            <h4>💰 التفضيلات المالية</h4>
+            <div class="setting-row"><label>العملة</label><select id="s-currency" onchange="applySettings()">
+                <option value="IQD">دينار عراقي (IQD)</option>
+                <option value="SAR">ريال سعودي (SAR)</option>
+                <option value="USD">دولار أمريكي (USD)</option>
+                <option value="AED">درهم إماراتي (AED)</option>
+              </select></div>
+            <div class="setting-row"><label>البلد / المنطقة</label><select id="s-country">
+                <option value="IQ">🇮🇶 العراق</option>
+                <option value="SA">🇸🇦 السعودية</option>
+                <option value="AE">🇦🇪 الإمارات</option>
+                <option value="KW">🇰🇼 الكويت</option>
+              </select></div>
+          </div>
+          <div class="setting-card">
+            <h4>👤 الملف الشخصي والصلاحيات</h4>
+            <div class="setting-row"><label>الدور الوظيفي</label>
+              <select id="s-role" onchange="applyRole()">
+                <option value="admin">مدير (Admin)</option>
+                <option value="employee">موظف (Employee)</option>
+                <option value="viewer">مشاهد (Viewer)</option>
+              </select>
+            </div>
+            <div class="setting-row"><label>الصلاحية الحالية</label><span class="role-badge role-admin"
+                id="role-badge-display">مدير</span></div>
+            <div style="margin-top:12px">
+              <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">اختر صورة الملف
+                الشخصي</div>
+              <div class="avatar-options" id="avatar-options">
+                <div class="avatar-opt selected" data-av="م" onclick="selectAvatar(this)">م</div>
+                <div class="avatar-opt" data-av="👤" onclick="selectAvatar(this)">👤</div>
+                <div class="avatar-opt" data-av="🧑‍💼" onclick="selectAvatar(this)">🧑‍💼</div>
+                <div class="avatar-opt" data-av="👷" onclick="selectAvatar(this)">👷</div>
+                <div class="avatar-opt" data-av="🦸" onclick="selectAvatar(this)">🦸</div>
+                <div class="avatar-opt" data-av="⚔️" onclick="selectAvatar(this)">⚔️</div>
+              </div>
+            </div>
+          </div>
+          <div class="setting-card">
+            <h4>💾 النسخ الاحتياطي والتصدير</h4>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <button class="btn btn-success" onclick="exportCSV()">⬇️ تصدير CSV</button>
+              <button class="btn btn-primary" onclick="exportJSON()">⬇️ تصدير JSON</button>
+              <button class="btn btn-amber" onclick="window.print()">🖨️ طباعة التقرير</button>
+            </div>
+          </div>
+        </div>
+        <div class="setting-card" style="margin-top:0">
+          <h4>ℹ️ معلومات النظام</h4>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">الإصدار</div>
+              <div style="font-weight:800;color:var(--accent)">v9.0</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">قاعدة البيانات</div>
+              <div style="font-weight:800;color:var(--green)">Firebase</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">النظام</div>
+              <div style="font-weight:800">4U WMS</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY LOG PAGE -->
+      <div class="page" id="page-actlog">
+        <div class="card">
+          <div class="card-header">
+            <div class="ch-left">
+              <h3>📜 سجل النشاطات الكامل</h3>
+              <p>جميع العمليات المسجلة</p>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="clearAct()">🗑️ مسح السجل</button>
+          </div>
+          <div class="act-list" id="act-list-full"></div>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="page" id="page-reports">
+        <div class="rep-cards">
+          <div class="rep-card" onclick="exportCSV()">
+            <div class="ri">📄</div>
+            <h4>تصدير CSV</h4>
+            <p>تصدير كامل البيانات بصيغة Excel</p>
+          </div>
+          <div class="rep-card" onclick="window.print()">
+            <div class="ri">🖨️</div>
+            <h4>طباعة</h4>
+            <p>طباعة كشف شامل بالمخزون</p>
+          </div>
+          <div class="rep-card" onclick="showPage('alerts',document.querySelectorAll('.nav-item')[3])">
+            <div class="ri">⚠️</div>
+            <h4>تقرير التنبيهات</h4>
+            <p>المنتجات ذات الكميات المنخفضة</p>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <div class="ch-left">
+              <h3>ملخص المستودع</h3>
+              <p>إحصائيات شاملة</p>
+            </div>
+          </div>
+          <div class="sum-grid" id="rep-summary"></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="ch-left">
+                <h3>الكميات حسب الفئة</h3>
+              </div>
+            </div><canvas id="chart-rep-bar" height="160"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="ch-left">
+                <h3>القيمة حسب الفئة</h3>
+              </div>
+            </div><canvas id="chart-rep-val" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+      <!-- TASK 1: GitHub page REMOVED completely -->
+
+    </main>
+  </div>
+
+  <!-- PRODUCT MODAL -->
+  <div class="modal-overlay" id="modal-prod" onclick="closeOnBg(event,'modal-prod')">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modal-prod-title">إضافة منتج</h3><button class="mcl" onclick="closeModal('modal-prod')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="fgrid">
+          <div class="fg full">
+            <label class="flbl">صورة المنتج</label>
+            <div class="img-upload-area" onclick="document.getElementById('img-input').click()">
+              <div id="img-placeholder">📷 اضغط لرفع صورة المنتج</div>
+              <img id="img-preview" class="img-preview">
+              <input type="file" id="img-input" accept="image/*" style="display:none" onchange="handleImgUpload(this)">
+            </div>
+          </div>
+          <div class="fg full"><label class="flbl">رابط صورة URL (اختياري)</label><input class="finput" id="f-imgurl"
+              placeholder="https://example.com/image.jpg" oninput="previewImgUrl(this.value)"></div>
+          <div class="fg full"><label class="flbl">اسم المنتج *</label><input class="finput" id="f-name"
+              placeholder="أدخل اسم المنتج"></div>
+          <div class="fg"><label class="flbl">رمز SKU</label><input class="finput" id="f-sku" placeholder="PRD-001">
+          </div>
+          <div class="fg"><label class="flbl">الفئة *</label><input class="finput" id="f-cat" placeholder="إلكترونيات"
+              list="cat-dl"><datalist id="cat-dl"></datalist></div>
+          <div class="fg"><label class="flbl">الكمية *</label><input class="finput" id="f-qty" type="number" min="0"
+              placeholder="0"></div>
+          <div class="fg"><label class="flbl">الحد الأدنى للتنبيه</label><input class="finput" id="f-min" type="number"
+              min="0" placeholder="10"></div>
+          <div class="fg"><label class="flbl">سعر الوحدة (ر.س)</label><input class="finput" id="f-price" type="number"
+              min="0" step="0.01" placeholder="0.00"></div>
+          <div class="fg"><label class="flbl">المورد</label><input class="finput" id="f-supplier"
+              placeholder="اسم المورد"></div>
+          <div class="fg"><label class="flbl">الموقع في المستودع</label><input class="finput" id="f-loc"
+              placeholder="رف A - صف 3"></div>
+          <div class="fg full"><label class="flbl">ملاحظات</label><textarea class="ftxt" id="f-notes"
+              placeholder="أي ملاحظات..."></textarea></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-prod')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveProd()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL MODAL -->
+  <div class="modal-overlay" id="modal-detail" onclick="closeOnBg(event,'modal-detail')">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="detail-title">تفاصيل المنتج</h3><button class="mcl" onclick="closeModal('modal-detail')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="detail-body"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-detail')">إغلاق</button>
+        <button class="btn btn-amber" id="detail-txn-btn">🔄 حركة مخزون</button>
+        <button class="btn btn-primary" id="detail-edit-btn">✏️ تعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TXN MODAL -->
+  <div class="modal-overlay" id="modal-txn" onclick="closeOnBg(event,'modal-txn')">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-head">
+        <h3 id="txn-title">حركة مخزون</h3><button class="mcl" onclick="closeModal('modal-txn')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="txn-type-row">
+          <button class="txn-type-btn in" id="txn-in-btn" onclick="setTxnType('in')">📥 إضافة</button>
+          <button class="txn-type-btn out" id="txn-out-btn" onclick="setTxnType('out')">📤 سحب</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="fg"><label class="flbl">المنتج *</label><select class="fsel" id="txn-product">
+              <option value="">اختر منتج...</option>
+            </select></div>
+          <div class="fg"><label class="flbl">الكمية *</label><input class="finput" id="txn-qty" type="number" min="1"
+              placeholder="0"></div>
+          <div class="fg"><label class="flbl">ملاحظة</label><input class="finput" id="txn-note"
+              placeholder="سبب العملية..."></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-txn')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveTxn()">✅ تنفيذ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO MODALS: About / Privacy / Support -->
+  <div class="modal-overlay" id="modal-info" onclick="closeOnBg(event,'modal-info')">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-head">
+        <h3 id="info-modal-title">حول النظام</h3><button class="mcl" onclick="closeModal('modal-info')">✕</button>
+      </div>
+      <div class="modal-body info-modal-body" id="info-modal-body"></div>
+      <div class="modal-foot"><button class="btn btn-primary" onclick="closeModal('modal-info')">إغلاق</button></div>
+    </div>
+  </div>
+
+  <div class="toast-cont" id="toast-cont"></div>
+
+  <script>
+    // ============================================================
+    // FIREBASE INIT — using compat SDK for plain HTML file
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBC8sgr57fdxhfdXCkeW0inpj_DFynpC64",
+      authDomain: "u-warhouse.firebaseapp.com",
+      projectId: "u-warhouse",
+      storageBucket: "u-warhouse.firebasestorage.app",
+      messagingSenderId: "948404449640",
+      appId: "1:948404449640:web:b1fd47a11293e2b75f26dd"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Firestore collection references
+    const productsCol = db.collection('products');
+    const transactionsCol = db.collection('transactions');
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let products = [];   // loaded from Firestore
+    let transactions = [];   // loaded from Firestore
+    // activity stays local (localStorage)
+    let activity = JSON.parse(localStorage.getItem('wms3_activity') || '[]');
+
+    let editingId = null, curPage = 1, txnType = 'in', isDark = localStorage.getItem('wms_dark') === '1';
+    let selectedIds = new Set();
+    const PER = 9;
+    let catChart = null, statusChart = null, repBarChart = null, repValChart = null;
+    let currentImgData = '';
+
+    // ============================================================
+    // TASK 5: SPLASH with splatter particles
+    // ============================================================
+    (function () {
+      const container = document.getElementById('splash-splatters');
+      if (!container) return;
+      // Create splatter dots around logo reveal
+      const colors = ['#c0392b', '#ff4444', '#ff6b6b', '#8b0000', '#fff'];
+      for (let i = 0; i < 18; i++) {
+        const dot = document.createElement('div');
+        const size = Math.random() * 12 + 4;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * 140 + 60;
+        const x = 50 + Math.cos(angle) * dist / window.innerWidth * 100;
+        const y = 50 + Math.sin(angle) * dist / window.innerHeight * 100;
+        const delay = Math.random() * 0.8 + 0.2;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        dot.style.cssText = `
+      position:absolute;
+      width:${size}px;height:${size}px;
+      background:${color};
+      border-radius:${Math.random() > 0.5 ? '50%' : '30% 70% 50% 50%'};
+      left:${x}%;top:${y}%;
+      opacity:0;
+      transform:scale(0);
+      animation:splatterPop .4s ease ${delay}s forwards;
+      pointer-events:none;
+    `;
+        container.appendChild(dot);
+      }
+      // Inject splatter keyframe once
+      const style = document.createElement('style');
+      style.textContent = `
+    @keyframes splatterPop{
+      0%{opacity:0;transform:scale(0)}
+      40%{opacity:0.85;transform:scale(1.2)}
+      70%{opacity:0.5;transform:scale(0.9)}
+      100%{opacity:0;transform:scale(0.4)}
+    }
+    #splash-splatters{position:absolute;inset:0;pointer-events:none;z-index:1}
+  `;
+      document.head.appendChild(style);
+    })();
+
+    setTimeout(() => {
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.classList.add('fade-out');
+        setTimeout(() => { splash.style.display = 'none' }, 700);
+      }
+    }, 3800);
+
+    // ============================================================
+    // THEME
+    // ============================================================
+    function toggleTheme() { isDark = !isDark; localStorage.setItem('wms_dark', isDark ? '1' : '0'); applyTheme() }
+    function applyTheme() {
+      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+      document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
+      const sd = document.getElementById('s-dark'); if (sd) sd.checked = isDark;
+      if (document.getElementById('page-dashboard').classList.contains('active')) updateDash();
+    }
+    applyTheme();
+
+    // ============================================================
+    // CLOCK — respects 12h/24h setting
+    // ============================================================
+    function updateClock() {
+      const now = new Date();
+      const use24 = (appSettings.timefmt === '24');
+      const timeEl = document.getElementById('wb-time');
+      const ampmEl = document.getElementById('wb-ampm');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      if (use24) {
+        const h24 = String(now.getHours()).padStart(2, '0');
+        if (timeEl) timeEl.textContent = h24 + ':' + m;
+        if (ampmEl) ampmEl.textContent = '';
+      } else {
+        let h = now.getHours();
+        const isAM = h < 12;
+        const ampm = isAM ? 'ص' : 'م';
+        h = h % 12 || 12;
+        if (timeEl) timeEl.textContent = h + ':' + m;
+        if (ampmEl) ampmEl.textContent = ampm;
+      }
+      // Date locale based on language
+      const locale = (appSettings.lang === 'en') ? 'en-US' : 'ar-SA';
+      const dateEl = document.getElementById('wb-date');
+      if (dateEl) dateEl.textContent = now.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    // ============================================================
+    // TASK 4: BANNER BLADE/FIRE ANIMATION — strong & visible
+    // ============================================================
+    function runBannerAnim() {
+      const container = document.getElementById('banner-anim');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const fireIntensity = dark ? 0.95 : 0.65;
+
+      // 4 blades sweeping right to left with stagger
+      for (let i = 0; i < 4; i++) {
+        const b = document.createElement('div');
+        const h = Math.random() * 60 + 50;
+        const top = Math.random() * 50 + 10;
+        b.style.cssText = `
+      position:absolute;
+      width:3px;
+      height:${h}%;
+      top:${top}%;
+      right:${80 + i * 5}%;
+      background:linear-gradient(180deg,
+        transparent 0%,
+        rgba(255,230,150,${fireIntensity}) 20%,
+        rgba(255,100,50,${fireIntensity}) 55%,
+        rgba(192,57,43,${fireIntensity * 0.8}) 80%,
+        transparent 100%
+      );
+      border-radius:1px;
+      box-shadow:0 0 8px rgba(255,100,50,0.6),0 0 16px rgba(192,57,43,0.4);
+      transform-origin:center;
+      opacity:0;
+      animation:bannerBlade 0.8s ease ${i * 0.12}s both;
+    `;
+        container.appendChild(b);
+      }
+
+      // Impact flash
+      setTimeout(() => {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+      position:absolute;inset:0;
+      background:radial-gradient(ellipse at 35% center,
+        rgba(255,200,100,0.35) 0%,
+        rgba(192,57,43,0.2) 40%,
+        transparent 70%
+      );
+      animation:bannerFlash 0.5s ease forwards;
+      pointer-events:none;
+    `;
+        container.appendChild(flash);
+      }, 350);
+
+      // Fire particles — more, bigger, more visible
+      setTimeout(() => {
+        for (let i = 0; i < 14; i++) {
+          const f = document.createElement('div');
+          const sz = Math.random() * 22 + 10;
+          const left = Math.random() * 35 + 10;
+          const top = Math.random() * 65 + 18;
+          const dur = 0.7 + Math.random() * 0.5;
+          const delay = Math.random() * 0.4;
+          f.style.cssText = `
+        position:absolute;
+        width:${sz}px;height:${sz}px;
+        left:${left}%;top:${top}%;
+        border-radius:50% 50% 50% 0;
+        background:radial-gradient(circle,
+          rgba(255,220,80,${fireIntensity}) 0%,
+          rgba(255,100,30,${fireIntensity * 0.8}) 50%,
+          rgba(192,57,43,${fireIntensity * 0.5}) 80%,
+          transparent 100%
+        );
+        box-shadow:0 0 ${sz}px rgba(255,100,30,0.5);
+        transform:rotate(45deg) scale(0);
+        opacity:0;
+        animation:bannerFire ${dur}s ease ${delay}s forwards;
+        pointer-events:none;
+      `;
+          container.appendChild(f);
+        }
+      }, 420);
+
+      // Cleanup
+      setTimeout(() => { container.innerHTML = '' }, 2200);
+    }
+
+    // Inject banner keyframes
+    (function () {
+      const s = document.createElement('style');
+      s.textContent = `
+    @keyframes bannerBlade{
+      0%{opacity:0;transform:translateX(100px) rotate(-20deg) scaleY(0.1)}
+      20%{opacity:1;transform:translateX(10px) rotate(-15deg) scaleY(1)}
+      75%{opacity:0.5;transform:translateX(-80px) rotate(-12deg) scaleY(0.8)}
+      100%{opacity:0;transform:translateX(-180px) rotate(-10deg) scaleY(0.3)}
+    }
+    @keyframes bannerFlash{
+      0%{opacity:0}25%{opacity:1}100%{opacity:0}
+    }
+    @keyframes bannerFire{
+      0%{opacity:0;transform:rotate(45deg) scale(0)}
+      25%{opacity:1;transform:rotate(45deg) scale(1.15)}
+      60%{opacity:0.7;transform:rotate(45deg) scale(0.85) translateY(-8px)}
+      100%{opacity:0;transform:rotate(45deg) scale(0.2) translateY(-22px)}
+    }
+  `;
+      document.head.appendChild(s);
+    })();
+
+    // Run on load (after splash), then every 60s
+    setTimeout(runBannerAnim, 4800);
+    setInterval(runBannerAnim, 60000);
+
+    // ============================================================
+    // LOGIN — unchanged logic, preserved
+    // ============================================================
+    const USERS = { admin: '1234', مدير: 'admin' };
+    function doLogin() {
+      const u = document.getElementById('l-user').value.trim();
+      const p = document.getElementById('l-pass').value;
+      document.getElementById('login-err').style.display = 'none';
+      if (USERS[u] === p) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('uname').textContent = u;
+        document.getElementById('uavatar').textContent = appSettings.avatar || u[0];
+        document.getElementById('wb-greeting').textContent = 'مرحباً، ' + u + ' 👋';
+        localStorage.setItem('wms_user', u);
+        updateRoleBadge(appSettings.role || 'admin');
+        applyRolePermissions(appSettings.role || 'admin');
+        applyLang(appSettings.lang || 'ar');
+        initApp();
+        toast('👋 أهلاً ' + u, 'success');
+      } else {
+        document.getElementById('login-err').style.display = 'block';
+      }
+    }
+    function doLogout() {
+      if (!confirm('تسجيل الخروج؟')) return;
+      localStorage.removeItem('wms_user');
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('l-pass').value = '';
+      document.getElementById('login-err').style.display = 'none';
+    }
+    const su = localStorage.getItem('wms_user');
+    if (su && USERS[su]) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('uname').textContent = su;
+      document.getElementById('uavatar').textContent = appSettings.avatar || su[0];
+      document.getElementById('wb-greeting').textContent = 'مرحباً، ' + su + ' 👋';
+      // Restore role & language
+      updateRoleBadge(appSettings.role || 'admin');
+      applyRolePermissions(appSettings.role || 'admin');
+      applyLang(appSettings.lang || 'ar');
+    }
+
+    // SAVE — activity stays local
+    function saveA() { localStorage.setItem('wms3_activity', JSON.stringify(activity)) }
+
+    // ============================================================
+    // FIRESTORE — PRODUCTS CRUD
+    // ============================================================
+
+    // Load all products from Firestore into memory array
+    async function loadProducts() {
+      try {
+        const snap = await productsCol.orderBy('createdAt', 'asc').get();
+        products = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      } catch (e) {
+        console.error('Firestore loadProducts error:', e);
+        toast('⚠️ تعذّر تحميل المنتجات من قاعدة البيانات', 'error');
+        products = [];
+      }
+    }
+
+    // Add new product to Firestore
+    async function addProductFS(data) {
+      try {
+        const docRef = await productsCol.add({
+          ...data,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return docRef.id;
+      } catch (e) {
+        console.error('Firestore addProduct error:', e);
+        toast('⚠️ تعذّر حفظ المنتج', 'error');
+        return null;
+      }
+    }
+
+    // Update existing product in Firestore
+    async function updateProductFS(id, data) {
+      try {
+        await productsCol.doc(id).update({
+          ...data,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {
+        console.error('Firestore updateProduct error:', e);
+        toast('⚠️ تعذّر تحديث المنتج', 'error');
+      }
+    }
+
+    // Delete product from Firestore
+    async function deleteProductFS(id) {
+      try {
+        await productsCol.doc(id).delete();
+      } catch (e) {
+        console.error('Firestore deleteProduct error:', e);
+        toast('⚠️ تعذّر حذف المنتج', 'error');
+      }
+    }
+
+    // Update only product qty in Firestore
+    async function updateQtyFS(id, newQty) {
+      try {
+        await productsCol.doc(id).update({
+          qty: newQty,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {
+        console.error('Firestore updateQty error:', e);
+      }
+    }
+
+    // ============================================================
+    // FIRESTORE — TRANSACTIONS CRUD
+    // ============================================================
+
+    // Load all transactions from Firestore (newest first)
+    async function loadTransactions() {
+      try {
+        const snap = await transactionsCol.orderBy('createdAt', 'desc').get();
+        transactions = snap.docs.map(doc => ({ ...doc.data(), fsId: doc.id }));
+      } catch (e) {
+        console.error('Firestore loadTransactions error:', e);
+        toast('⚠️ تعذّر تحميل سجل الحركات', 'error');
+        transactions = [];
+      }
+    }
+
+    // Add transaction to Firestore
+    async function addTransactionFS(txnData) {
+      try {
+        await transactionsCol.add({
+          ...txnData,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {
+        console.error('Firestore addTransaction error:', e);
+        toast('⚠️ تعذّر حفظ حركة المخزون', 'error');
+      }
+    }
+
+    // ============================================================
+    // NAV — TASK 1: github case removed from map
+    // ============================================================
+    function showPage(name, el) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const pg = document.getElementById('page-' + name);
+      if (!pg) return;
+      pg.classList.add('active');
+      if (el) el.classList.add('active');
+      const map = {
+        dashboard: ['لوحة التحكم', 'نظرة عامة على المستودع'],
+        products: ['إدارة المنتجات', 'عرض وإدارة كامل المخزون'],
+        transactions: ['حركة المخزون', 'سجل الإضافات والسحوبات'],
+        alerts: ['التنبيهات', 'المنتجات التي تحتاج إعادة تموين'],
+        reports: ['التقارير', 'تحليل وتصدير بيانات المستودع'],
+        settings: ['الإعدادات', 'تخصيص النظام والصلاحيات'],
+        actlog: ['سجل النشاط', 'جميع العمليات المسجلة']
+      };
+      const info = map[name] || [name, ''];
+      document.getElementById('page-title').textContent = info[0];
+      document.getElementById('page-sub').textContent = info[1];
+      if (name === 'dashboard') updateDash();
+      if (name === 'products') renderTable();
+      if (name === 'transactions') renderTxn();
+      if (name === 'alerts') renderAlerts();
+      if (name === 'reports') renderReports();
+      if (name === 'settings') syncSettingsUI();
+      if (name === 'actlog') renderActListFull();
+    }
+
+    function getStatus(p) { if (p.qty === 0) return 'نفذ'; if (p.qty <= (p.minQty || 10)) return 'منخفض'; return 'متوفر' }
+
+    // ============================================================
+    // SETTINGS & ROLES
+    // ============================================================
+    let appSettings = JSON.parse(localStorage.getItem('wms_settings') || '{"timefmt":"12","currency":"IQD","country":"IQ","lang":"ar","role":"admin","avatar":"م"}');
+
+    function syncSettingsUI() {
+      const s = appSettings;
+      const sd = document.getElementById('s-dark'); if (sd) sd.checked = isDark;
+      const tf = document.getElementById('s-timefmt'); if (tf) tf.value = s.timefmt || '12';
+      const sl = document.getElementById('s-lang'); if (sl) sl.value = s.lang || 'ar';
+      const sc = document.getElementById('s-currency'); if (sc) sc.value = s.currency || 'IQD';
+      const sco = document.getElementById('s-country'); if (sco) sco.value = s.country || 'IQ';
+      const sr = document.getElementById('s-role'); if (sr) sr.value = s.role || 'admin';
+      updateRoleBadge(s.role || 'admin');
+      // mark selected avatar
+      document.querySelectorAll('.avatar-opt').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.av === (s.avatar || 'م'));
+      });
+    }
+
+    function applySettings() {
+      const tf = document.getElementById('s-timefmt');
+      const sc = document.getElementById('s-currency');
+      const sl = document.getElementById('s-lang');
+      const sco = document.getElementById('s-country');
+      if (tf) appSettings.timefmt = tf.value;
+      if (sc) appSettings.currency = sc.value;
+      if (sl) appSettings.lang = sl.value;
+      if (sco) appSettings.country = sco.value;
+      localStorage.setItem('wms_settings', JSON.stringify(appSettings));
+      // Apply immediately
+      updateClock();
+      updateDash();
+      applyLang(appSettings.lang);
+      toast('✅ تم حفظ الإعدادات', 'success');
+    }
+
+    function applyRole() {
+      const sr = document.getElementById('s-role');
+      if (!sr) return;
+      const role = sr.value;
+      appSettings.role = role;
+      localStorage.setItem('wms_settings', JSON.stringify(appSettings));
+      updateRoleBadge(role);
+      applyRolePermissions(role);
+      toast('🔑 تم تغيير الدور إلى: ' + sr.options[sr.selectedIndex].text, 'info');
+    }
+
+    function updateRoleBadge(role) {
+      const badge = document.getElementById('role-badge-display');
+      if (!badge) return;
+      const labels = { admin: 'مدير', employee: 'موظف', viewer: 'مشاهد' };
+      const cls = { admin: 'role-admin', employee: 'role-employee', viewer: 'role-viewer' };
+      badge.className = 'role-badge ' + (cls[role] || 'role-viewer');
+      badge.textContent = labels[role] || role;
+      const urole = document.getElementById('urole-label');
+      if (urole) urole.textContent = labels[role] || role;
+    }
+
+    function applyRolePermissions(role) {
+      // viewer = read-only, employee = add/edit only (no delete), admin = full
+      document.querySelectorAll('.ib.del, [onclick*="deleteProd"], [onclick*="bulkDelete"]').forEach(el => {
+        el.style.opacity = (role === 'viewer' || role === 'employee') ? '0.3' : '';
+        el.style.pointerEvents = (role === 'viewer' || role === 'employee') ? 'none' : '';
+      });
+      document.querySelectorAll('.btn-primary, .ib.edit, [onclick*="openAddModal"], [onclick*="openTxnModal"]').forEach(el => {
+        el.style.opacity = role === 'viewer' ? '0.3' : '';
+        el.style.pointerEvents = role === 'viewer' ? 'none' : '';
+      });
+    }
+
+    // Language switching (key labels)
+    const LANG_LABELS = {
+      ar: {
+        dashboard: 'لوحة التحكم', products: 'المنتجات', transactions: 'حركة المخزون',
+        alerts: 'التنبيهات', reports: 'التقارير', settings: 'الإعدادات', actlog: 'سجل النشاط',
+        addProduct: '＋ إضافة منتج', search: 'بحث سريع...'
+      },
+      en: {
+        dashboard: 'Dashboard', products: 'Products', transactions: 'Transactions',
+        alerts: 'Alerts', reports: 'Reports', settings: 'Settings', actlog: 'Activity Log',
+        addProduct: '＋ Add Product', search: 'Quick search...'
+      }
+    };
+    function applyLang(lang) {
+      const L = LANG_LABELS[lang] || LANG_LABELS['ar'];
+      const html = document.documentElement;
+      if (lang === 'en') { html.setAttribute('lang', 'en'); html.setAttribute('dir', 'ltr'); }
+      else { html.setAttribute('lang', 'ar'); html.setAttribute('dir', 'rtl'); }
+      // Update search placeholder
+      const gs = document.getElementById('gsearch'); if (gs) gs.placeholder = L.search;
+      // Update add product button text
+      document.querySelectorAll('[onclick="openAddModal()"]').forEach(b => b.textContent = L.addProduct);
+    }
+
+    function selectAvatar(el) {
+      document.querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      const av = el.dataset.av;
+      appSettings.avatar = av;
+      localStorage.setItem('wms_settings', JSON.stringify(appSettings));
+      const uav = document.getElementById('uavatar');
+      if (uav) uav.textContent = av;
+    }
+
+    // ============================================================
+    // EXPORT JSON
+    // ============================================================
+    function exportJSON() {
+      if (!products.length) { toast('لا يوجد منتجات', 'error'); return; }
+      const data = { exported: new Date().toISOString(), products, transactions };
+      const json = JSON.stringify(data, null, 2);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      a.download = '4U_backup_' + new Date().toLocaleDateString('ar-SA').replace(/\//g, '-') + '.json';
+      a.click();
+      toast('✅ تم تصدير JSON', 'success');
+    }
+
+    // ============================================================
+    // IMAGE URL PREVIEW
+    // ============================================================
+    function previewImgUrl(url) {
+      if (!url) return;
+      const prev = document.getElementById('img-preview');
+      const ph = document.getElementById('img-placeholder');
+      prev.src = url;
+      prev.onload = () => {
+        currentImgData = url;
+        prev.style.display = 'block';
+        if (ph) ph.style.display = 'none';
+      };
+      prev.onerror = () => { prev.style.display = 'none'; if (ph) ph.style.display = 'block'; };
+    }
+
+    // ============================================================
+    // INFO MODALS: About / Privacy / Support
+    // ============================================================
+    const INFO_CONTENT = {
+      about: {
+        title: '🏛️ حول نظام 4U',
+        body: `
+      <h3>نظام 4U لإدارة المستودعات</h3>
+      <p>نظام متكامل واحترافي لإدارة مخازن الأعمال، مبني بتقنية Firebase Firestore للتزامن الفوري عبر جميع الأجهزة.</p>
+      <h4>✨ الميزات الرئيسية</h4>
+      <ul>
+        <li>إدارة المنتجات والمخزون في الوقت الفعلي</li>
+        <li>نظام حركة مخزون (إضافة وسحب)</li>
+        <li>لوحة تحكم تحليلية مع رسوم بيانية</li>
+        <li>نظام تنبيهات للمخزون المنخفض</li>
+        <li>دعم الصور للمنتجات</li>
+        <li>تصدير CSV و JSON</li>
+        <li>واجهة عربية RTL كاملة</li>
+      </ul>
+      <h4>🛠️ التقنيات المستخدمة</h4>
+      <ul>
+        <li>Firebase Firestore (قاعدة البيانات)</li>
+        <li>Chart.js (الرسوم البيانية)</li>
+        <li>Google Fonts — Tajawal</li>
+        <li>HTML5 / CSS3 / JavaScript</li>
+      </ul>
+      <p style="margin-top:14px;font-size:11px;opacity:0.5">الإصدار 9.0 — 4U Warehouse System © 2026</p>
+    `
+      },
+      privacy: {
+        title: '🔐 سياسة الخصوصية',
+        body: `
+      <h3>سياسة الخصوصية وحماية البيانات</h3>
+      <p>نحن نأخذ خصوصيتك بجدية تامة. يوضح هذا المستند كيفية تعاملنا مع البيانات.</p>
+      <h4>📦 البيانات المخزّنة</h4>
+      <ul>
+        <li>بيانات المنتجات والمخزون (على Firebase Firestore)</li>
+        <li>سجل حركات المخزون (على Firebase Firestore)</li>
+        <li>إعدادات المستخدم (على الجهاز فقط - localStorage)</li>
+        <li>سجل النشاطات (على الجهاز فقط - localStorage)</li>
+      </ul>
+      <h4>🔒 الأمان</h4>
+      <ul>
+        <li>لا يتم مشاركة بياناتك مع أطراف ثالثة</li>
+        <li>بيانات Firestore محمية بقواعد أمان Google</li>
+        <li>كلمات المرور غير مخزّنة على الخوادم</li>
+      </ul>
+      <h4>🗑️ حذف البيانات</h4>
+      <p>يمكنك حذف منتجاتك وسجل النشاط في أي وقت من داخل التطبيق.</p>
+    `
+      },
+      support: {
+        title: '🆘 الدعم الفني',
+        body: `
+      <h3>مركز الدعم الفني — 4U WMS</h3>
+      <p>نحن هنا لمساعدتك! إذا واجهت أي مشكلة أو استفسار، يمكنك التواصل معنا.</p>
+      <h4>📋 الأسئلة الشائعة</h4>
+      <ul>
+        <li><b>لا تظهر البيانات؟</b> تأكد من اتصال الإنترنت وأن Firebase مفعّل.</li>
+        <li><b>كيف أضيف منتج؟</b> اضغط على زر «+ إضافة منتج» في الشريط العلوي.</li>
+        <li><b>كيف أصدّر البيانات؟</b> من الإعدادات أو صفحة التقارير.</li>
+        <li><b>هل يعمل على الموبايل؟</b> نعم، التطبيق متوافق مع الأجهزة المحمولة.</li>
+      </ul>
+      <h4>📞 التواصل</h4>
+      <p>للدعم الفني والاستفسارات، يمكن التواصل عبر مسؤول النظام المحلي في شركتك.</p>
+      <h4>🔄 تحديثات النظام</h4>
+      <p>يتم تحديث النظام تلقائياً. الإصدار الحالي: <b style="color:var(--accent)">v9.0</b></p>
+    `
+      }
+    };
+
+    function openInfoModal(type) {
+      const content = INFO_CONTENT[type];
+      if (!content) return;
+      document.getElementById('info-modal-title').textContent = content.title;
+      document.getElementById('info-modal-body').innerHTML = content.body;
+      openModal('modal-info');
+    }
+
+
+    // IMAGE
+    function handleImgUpload(input) {
+      const file = input.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        currentImgData = e.target.result;
+        const prev = document.getElementById('img-preview');
+        prev.src = currentImgData; prev.style.display = 'block';
+        document.getElementById('img-placeholder').style.display = 'none';
+        const urlField = document.getElementById('f-imgurl');
+        if (urlField) urlField.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // MODAL
+    function openModal(id) { document.getElementById(id).classList.add('open') }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); editingId = null }
+    function closeOnBg(e, id) { if (e.target === document.getElementById(id)) closeModal(id) }
+
+    function openAddModal(id = null) {
+      editingId = id; currentImgData = '';
+      document.getElementById('modal-prod-title').textContent = id ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد';
+      const prev = document.getElementById('img-preview');
+      prev.style.display = 'none';
+      document.getElementById('img-placeholder').style.display = 'block';
+      document.getElementById('img-input').value = '';
+      const iuField = document.getElementById('f-imgurl');
+      if (iuField) iuField.value = '';
+      if (id !== null) {
+        const p = products.find(x => x.id === id);
+        document.getElementById('f-name').value = p.name;
+        document.getElementById('f-sku').value = p.sku || '';
+        document.getElementById('f-cat').value = p.category;
+        document.getElementById('f-qty').value = p.qty;
+        document.getElementById('f-min').value = p.minQty || 10;
+        document.getElementById('f-price').value = p.price || '';
+        document.getElementById('f-supplier').value = p.supplier || '';
+        document.getElementById('f-loc').value = p.location || '';
+        document.getElementById('f-notes').value = p.notes || '';
+        if (p.image) {
+          currentImgData = p.image;
+          prev.src = p.image;
+          prev.style.display = 'block';
+          document.getElementById('img-placeholder').style.display = 'none';
+          // If image is a URL (not base64), populate the URL field
+          if (iuField && p.image.startsWith('http')) iuField.value = p.image;
+        }
+      } else {
+        ['f-name', 'f-sku', 'f-cat', 'f-qty', 'f-min', 'f-price', 'f-supplier', 'f-loc', 'f-notes'].forEach(f => document.getElementById(f).value = '');
+      }
+      const cats = [...new Set(products.map(p => p.category))];
+      document.getElementById('cat-dl').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+      openModal('modal-prod');
+    }
+
+    async function saveProd() {
+      const name = document.getElementById('f-name').value.trim();
+      const cat = document.getElementById('f-cat').value.trim();
+      const qty = parseInt(document.getElementById('f-qty').value) || 0;
+      if (!name || !cat) { toast('يرجى ملء الاسم والفئة', 'error'); return; }
+      const data = {
+        name, category: cat, qty,
+        sku: document.getElementById('f-sku').value.trim() || ('PRD-' + String(products.length + 1).padStart(3, '0')),
+        minQty: parseInt(document.getElementById('f-min').value) || 10,
+        price: parseFloat(document.getElementById('f-price').value) || 0,
+        supplier: document.getElementById('f-supplier').value.trim(),
+        location: document.getElementById('f-loc').value.trim(),
+        notes: document.getElementById('f-notes').value.trim(),
+        image: currentImgData || '',
+        date: new Date().toLocaleDateString('ar-SA')
+      };
+      if (editingId !== null) {
+        // UPDATE existing product in Firestore
+        await updateProductFS(editingId, data);
+        const i = products.findIndex(p => p.id === editingId);
+        if (i > -1) products[i] = { ...products[i], ...data };
+        log('edit', 'تم تعديل: ' + name);
+        toast('✅ تم تحديث المنتج', 'success');
+      } else {
+        // ADD new product to Firestore
+        const newId = await addProductFS(data);
+        if (newId) {
+          data.id = newId;
+          products.push(data);
+          log('add', 'تم إضافة: ' + name + ' (' + qty + ' وحدة)');
+          toast('✅ تم إضافة المنتج', 'success');
+        }
+      }
+      closeModal('modal-prod'); updateAll();
+    }
+
+    async function deleteProd(id) {
+      const p = products.find(x => x.id === id);
+      if (!confirm('حذف "' + p.name + '"؟')) return;
+      await deleteProductFS(id);
+      products = products.filter(x => x.id !== id);
+      log('del', 'تم حذف: ' + p.name);
+      toast('🗑️ تم حذف المنتج', 'error'); updateAll();
+    }
+
+    // BULK
+    function toggleSelectAll(checked) {
+      const checkboxes = document.querySelectorAll('.row-check');
+      checkboxes.forEach(cb => { cb.checked = checked; const id = parseInt(cb.dataset.id); checked ? selectedIds.add(id) : selectedIds.delete(id) });
+      updateBulkBar();
+    }
+    function toggleRowSelect(id, checked) { checked ? selectedIds.add(id) : selectedIds.delete(id); updateBulkBar() }
+    function updateBulkBar() {
+      const bar = document.getElementById('bulk-bar');
+      const count = selectedIds.size;
+      if (count > 0) { bar.classList.add('show'); document.getElementById('bulk-count').textContent = count + ' منتج محدد' }
+      else bar.classList.remove('show');
+    }
+    function clearSelection() { selectedIds.clear(); document.querySelectorAll('.row-check').forEach(cb => cb.checked = false); document.getElementById('select-all').checked = false; updateBulkBar() }
+    async function bulkDelete() {
+      if (!confirm('حذف ' + selectedIds.size + ' منتجات؟')) return;
+      const ids = [...selectedIds];
+      // Delete all from Firestore in parallel
+      await Promise.all(ids.map(id => deleteProductFS(id)));
+      products = products.filter(p => !selectedIds.has(p.id));
+      log('del', 'تم حذف ' + ids.length + ' منتجات');
+      selectedIds.clear(); toast('🗑️ تم الحذف', 'error'); updateAll();
+    }
+
+    // DETAIL
+    function viewDetail(id) {
+      const p = products.find(x => x.id === id);
+      document.getElementById('detail-title').textContent = '📦 ' + p.name;
+      const st = getStatus(p);
+      const bc = st === 'متوفر' ? 'bg-green' : st === 'منخفض' ? 'bg-amber' : 'bg-red';
+      document.getElementById('detail-body').innerHTML = `
+    ${p.image ? `<img src="${p.image}" class="detail-img">` : ''}
+    <div class="detail-grid">
+      <div class="detail-item"><div class="dl">الاسم</div><div class="dv">${p.name}</div></div>
+      <div class="detail-item"><div class="dl">SKU</div><div class="dv" style="font-family:monospace">${p.sku || '—'}</div></div>
+      <div class="detail-item"><div class="dl">الفئة</div><div class="dv"><span class="badge bg-blue">${p.category}</span></div></div>
+      <div class="detail-item"><div class="dl">الحالة</div><div class="dv"><span class="badge ${bc}">${st}</span></div></div>
+      <div class="detail-item"><div class="dl">الكمية</div><div class="dv" style="font-size:22px">${p.qty.toLocaleString()}</div></div>
+      <div class="detail-item"><div class="dl">الحد الأدنى</div><div class="dv">${p.minQty || 10}</div></div>
+      <div class="detail-item"><div class="dl">سعر الوحدة</div><div class="dv">${p.price ? p.price.toLocaleString('ar-SA') + ' ر.س' : '—'}</div></div>
+      <div class="detail-item"><div class="dl">القيمة الإجمالية</div><div class="dv">${(p.qty * (p.price || 0)).toLocaleString('ar-SA', { maximumFractionDigits: 0 })} ر.س</div></div>
+      <div class="detail-item"><div class="dl">المورد</div><div class="dv">${p.supplier || '—'}</div></div>
+      <div class="detail-item"><div class="dl">الموقع</div><div class="dv">${p.location || '—'}</div></div>
+      ${p.notes ? `<div class="detail-item full"><div class="dl">ملاحظات</div><div class="dv">${p.notes}</div></div>` : ''}
+    </div>`;
+      document.getElementById('detail-edit-btn').onclick = () => { closeModal('modal-detail'); openAddModal(id) };
+      document.getElementById('detail-txn-btn').onclick = () => { closeModal('modal-detail'); openTxnModal('in', id) };
+      openModal('modal-detail');
+    }
+
+    // TXN
+    function openTxnModal(type = 'in', pid = null) {
+      setTxnType(type);
+      const sel = document.getElementById('txn-product');
+      sel.innerHTML = '<option value="">اختر منتج...</option>' + products.map(p => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.qty})</option>`).join('');
+      document.getElementById('txn-qty').value = '';
+      document.getElementById('txn-note').value = '';
+      openModal('modal-txn');
+    }
+    function setTxnType(t) {
+      txnType = t;
+      document.getElementById('txn-in-btn').classList.toggle('selected', t === 'in');
+      document.getElementById('txn-out-btn').classList.toggle('selected', t === 'out');
+      document.getElementById('txn-title').textContent = t === 'in' ? '📥 إضافة للمخزون' : '📤 سحب من المخزون';
+    }
+    async function saveTxn() {
+      const pid = document.getElementById('txn-product').value;
+      const qty = parseInt(document.getElementById('txn-qty').value) || 0;
+      const note = document.getElementById('txn-note').value.trim();
+      if (!pid) { toast('يرجى اختيار منتج', 'error'); return; }
+      if (qty <= 0) { toast('الكمية يجب أن تكون أكبر من صفر', 'error'); return; }
+      const p = products.find(x => x.id === pid);
+      if (!p) { toast('المنتج غير موجود', 'error'); return; }
+      if (txnType === 'out' && qty > p.qty) { toast('الكمية المتاحة فقط ' + p.qty, 'error'); return; }
+
+      // Update qty in memory
+      const idx = products.findIndex(x => x.id === pid);
+      const newQty = products[idx].qty + (txnType === 'in' ? qty : -qty);
+      products[idx].qty = newQty;
+
+      // Update product qty in Firestore
+      await updateQtyFS(pid, newQty);
+
+      // Build transaction object
+      const txnObj = {
+        type: txnType, pid, pname: p.name, qty, note,
+        date: new Date().toLocaleDateString('ar-SA'),
+        time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      // Save transaction to Firestore
+      await addTransactionFS(txnObj);
+
+      // Add to local memory array (newest first)
+      transactions.unshift(txnObj);
+
+      log('txn', (txnType === 'in' ? 'استلام ' : 'صرف ') + qty + ' وحدة من ' + p.name);
+      saveA();
+      toast(txnType === 'in' ? '✅ تم إضافة ' + qty + ' وحدة' : '✅ تم سحب ' + qty + ' وحدة', 'success');
+      closeModal('modal-txn'); updateAll();
+    }
+    function renderTxn() {
+      const filter = document.getElementById('ftxn-type')?.value || '';
+      const list = filter ? transactions.filter(t => t.type === filter) : transactions;
+      document.getElementById('txn-total-stat').textContent = transactions.length + ' عملية';
+      const el = document.getElementById('txn-list');
+      if (!list.length) { el.innerHTML = '<div class="empty"><div class="ei">🔄</div><h3>لا توجد حركات مخزون</h3><p>ابدأ بإضافة أو سحب كميات من المنتجات</p><div class="empty-cta"><button class="btn btn-primary btn-sm" onclick="openTxnModal(\'in\')">📥 إضافة للمخزون</button></div></div>'; return; }
+      el.innerHTML = list.map(t => `
+    <div class="txn-item">
+      <span class="txn-badge ${t.type === 'in' ? 'txn-in' : 'txn-out'}">${t.type === 'in' ? 'إضافة' : 'سحب'}</span>
+      <div class="txn-info"><div class="txn-name">${t.pname}</div><div class="txn-note">${t.note || '—'}</div></div>
+      <div class="txn-qty ${t.type}">${t.type === 'in' ? '+' : '-'}${t.qty}</div>
+      <div class="txn-time">${t.date} ${t.time}</div>
+    </div>`).join('');
+    }
+
+    // TABLE
+    function renderTable() {
+      const s = (document.getElementById('psearch')?.value || '').toLowerCase();
+      const cf = document.getElementById('fcat')?.value || '';
+      const sf = document.getElementById('fstatus')?.value || '';
+      const sort = document.getElementById('fsort')?.value || 'date';
+      let list = products.filter(p => {
+        const ms = p.name.toLowerCase().includes(s) || (p.sku || '').toLowerCase().includes(s) || p.category.toLowerCase().includes(s);
+        return ms && (!cf || p.category === cf) && (!sf || getStatus(p) === sf);
+      });
+      if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+      else if (sort === 'qty-asc') list.sort((a, b) => a.qty - b.qty);
+      else if (sort === 'qty-desc') list.sort((a, b) => b.qty - a.qty);
+      else if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
+      const cats = [...new Set(products.map(p => p.category))];
+      const catEl = document.getElementById('fcat');
+      const curCat = catEl.value;
+      catEl.innerHTML = '<option value="">كل الفئات</option>' + cats.map(c => `<option value="${c}" ${c === curCat ? 'selected' : ''}>${c}</option>`).join('');
+      const total = list.length, pages = Math.ceil(total / PER) || 1;
+      if (curPage > pages) curPage = 1;
+      const start = (curPage - 1) * PER, slice = list.slice(start, start + PER);
+      const tbody = document.getElementById('ptbody');
+      if (!slice.length) {
+        tbody.innerHTML = `<tr><td colspan="10"><div class="empty"><div class="ei">🔍</div><h3>لا توجد نتائج</h3><p>جرّب تغيير معايير البحث أو الفلترة</p><div class="empty-cta"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('psearch').value='';renderTable()">مسح البحث</button></div></div></td></tr>`;
+      } else {
+        tbody.innerHTML = slice.map((p, i) => {
+          const st = getStatus(p);
+          const bc = st === 'متوفر' ? 'bg-green' : st === 'منخفض' ? 'bg-amber' : 'bg-red';
+          const pct = Math.min(100, p.minQty > 0 ? Math.round((p.qty / (p.minQty * 3)) * 100) : 100);
+          const bc2 = st === 'متوفر' ? '#10b981' : st === 'منخفض' ? '#f59e0b' : '#c0392b';
+          const tv = (p.qty * (p.price || 0)).toLocaleString('ar-SA', { maximumFractionDigits: 0 });
+          const isSelected = selectedIds.has(p.id);
+          return `<tr class="${isSelected ? 'selected-row' : ''}">
+        <td><input type="checkbox" class="row-check" data-id="${p.id}" ${isSelected ? 'checked' : ''} onchange="toggleRowSelect(${p.id},this.checked)" style="cursor:pointer"></td>
+        <td style="color:var(--text-light);font-size:12px;font-weight:600">${start + i + 1}</td>
+        <td>
+          <div class="prod-cell">
+            <div class="prod-img">${p.image ? `<img src="${p.image}">` : '📦'}</div>
+            <div><div class="pname">${p.name}</div><div class="psku">${p.sku || ''}</div></div>
+          </div>
+        </td>
+        <td><span class="badge bg-blue">${p.category}</span></td>
+        <td><div class="qbar-wrap"><b style="font-size:14px">${p.qty.toLocaleString()}</b><div class="qbar"><div class="qbar-fill" style="width:${pct}%;background:${bc2}"></div></div></div></td>
+        <td style="font-weight:700">${p.price ? p.price.toLocaleString('ar-SA') + ' ر.س' : '—'}</td>
+        <td style="font-weight:700;color:var(--text-muted)">${p.price ? tv + ' ر.س' : '—'}</td>
+        <td><span class="badge ${bc}">${st}</span></td>
+        <td style="color:var(--text-muted);font-size:11px">${p.date || '—'}</td>
+        <td><div class="act-btns">
+          <button class="ib" onclick="viewDetail(${p.id})" title="تفاصيل">👁</button>
+          <button class="ib edit" onclick="openAddModal(${p.id})" title="تعديل">✏️</button>
+          <button class="ib" onclick="openTxnModal('in',${p.id})" title="إضافة">📥</button>
+          <button class="ib del" onclick="deleteProd(${p.id})" title="حذف">🗑️</button>
+        </div></td>
+      </tr>`;
+        }).join('');
+      }
+      document.getElementById('tcount').textContent = total + ' منتج';
+      const pag = document.getElementById('pag');
+      pag.innerHTML = pages <= 1 ? '' : Array.from({ length: pages }, (_, i) =>
+        `<button class="pbtn ${i + 1 === curPage ? 'active' : ''}" onclick="curPage=${i + 1};renderTable()">${i + 1}</button>`
+      ).join('');
+    }
+
+    // ============================================================
+    // CURRENCY HELPER
+    // ============================================================
+    const CURRENCY_LABELS = { IQD: 'د.ع', SAR: 'ر.س', USD: '$', AED: 'د.إ' };
+    function getCurrencyLabel() { return CURRENCY_LABELS[appSettings.currency] || appSettings.currency; }
+    function formatPrice(val) {
+      if (!val && val !== 0) return '—';
+      const locale = appSettings.lang === 'en' ? 'en-US' : 'ar-SA';
+      return val.toLocaleString(locale, { maximumFractionDigits: 0 }) + ' ' + getCurrencyLabel();
+    }
+
+    // DASHBOARD
+    function updateDash() {
+      const total = products.length;
+      const instock = products.filter(p => getStatus(p) === 'متوفر').length;
+      const low = products.filter(p => getStatus(p) !== 'متوفر').length;
+      const val = products.reduce((s, p) => s + (p.qty * (p.price || 0)), 0);
+      animateCount('sv-total', total);
+      animateCount('sv-instock', instock);
+      animateCount('sv-low', low);
+      const locale = appSettings.lang === 'en' ? 'en-US' : 'ar-SA';
+      document.getElementById('sv-value').textContent = val.toLocaleString(locale, { maximumFractionDigits: 0 }) + ' ' + getCurrencyLabel();
+      // Update the currency badge in stat card
+      const currBadge = document.querySelector('#sv-value').closest('.stat-card')?.querySelector('.stat-change');
+      if (currBadge) currBadge.textContent = getCurrencyLabel();
+      const pct = total > 0 ? Math.round((instock / total) * 100) : 0;
+      document.getElementById('sc-instock').textContent = '↑ ' + pct + '%';
+      updateBadges(); renderCatChart(); renderStatusChart(); renderTopList(); renderActList();
+    }
+
+    function animateCount(id, target) {
+      const el = document.getElementById(id);
+      const start = parseInt(el.textContent) || 0;
+      const diff = target - start, steps = 20; let step = 0;
+      const timer = setInterval(() => {
+        step++; el.textContent = Math.round(start + (diff * step / steps));
+        if (step >= steps) { el.textContent = target; clearInterval(timer) }
+      }, 20);
+    }
+
+    // CHARTS — updated colors for red accent theme
+    function renderCatChart() {
+      const cats = {};
+      products.forEach(p => { cats[p.category] = (cats[p.category] || 0) + p.qty });
+      const labels = Object.keys(cats), data = Object.values(cats);
+      // Red-dominant palette
+      const clrs = ['#c0392b', '#e74c3c', '#a93226', '#922b21', '#7b241c', '#6e2111', '#cd6155', '#ec7063'];
+      const ctx = document.getElementById('chart-cat').getContext('2d');
+      if (catChart) catChart.destroy();
+      if (!labels.length) return;
+      catChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ data, backgroundColor: clrs.slice(0, labels.length), borderRadius: 7, borderSkipped: false }] },
+        options: {
+          responsive: true, plugins: { legend: { display: false } }, scales: {
+            y: { beginAtZero: true, grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)' }, ticks: { color: isDark ? '#666' : '#888' } },
+            x: { grid: { display: false }, ticks: { color: isDark ? '#666' : '#888' } }
+          }
+        }
+      });
+    }
+
+    function renderStatusChart() {
+      const instock = products.filter(p => getStatus(p) === 'متوفر').length;
+      const low = products.filter(p => getStatus(p) === 'منخفض').length;
+      const out = products.filter(p => getStatus(p) === 'نفذ').length;
+      const ctx = document.getElementById('chart-status').getContext('2d');
+      if (statusChart) statusChart.destroy();
+      if (!products.length) return;
+      statusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['متوفر', 'منخفض', 'نفذ'], datasets: [{
+            data: [instock, low, out],
+            backgroundColor: ['#10b981', '#f59e0b', '#c0392b'],
+            borderWidth: 3, borderColor: isDark ? '#111' : '#fff'
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Tajawal', size: 12 }, padding: 12, color: isDark ? '#888' : '#555' } } }, cutout: '65%' }
+      });
+    }
+
+    function renderTopList() {
+      const sorted = [...products].sort((a, b) => b.qty - a.qty).slice(0, 5);
+      const el = document.getElementById('top-list');
+      if (!sorted.length) { el.innerHTML = '<div class="empty"><div class="ei">📦</div><p>لا توجد منتجات</p></div>'; return; }
+      const rc = ['g', 's', 'b', '', ''];
+      el.innerHTML = sorted.map((p, i) => `
+    <div class="tp-item">
+      <div class="tp-rank ${rc[i] || ''}">${i + 1}</div>
+      ${p.image ? `<img src="${p.image}" style="width:28px;height:28px;border-radius:7px;object-fit:cover;flex-shrink:0">` : ''}
+      <div class="tp-info"><div class="tpn">${p.name}</div><div class="tpc">${p.category}</div></div>
+      <div class="tpq">${p.qty.toLocaleString()} وحدة</div>
+    </div>`).join('');
+    }
+
+    function renderActList() {
+      const el = document.getElementById('act-list');
+      if (!activity.length) { el.innerHTML = '<div class="empty"><div class="ei">📝</div><p>لا يوجد نشاط</p></div>'; return; }
+      el.innerHTML = activity.slice(0, 10).map(a => `
+    <div class="act-item">
+      <div class="adot ${a.type}"></div>
+      <div class="atext">${a.text}</div>
+      <div class="atime">${a.time}</div>
+    </div>`).join('');
+    }
+
+    function renderActListFull() {
+      const el = document.getElementById('act-list-full');
+      if (!el) return;
+      if (!activity.length) { el.innerHTML = '<div class="empty"><div class="ei">📝</div><h3>لا يوجد نشاط مسجّل</h3><p>ستظهر هنا جميع العمليات التي تتم على النظام.</p></div>'; return; }
+      el.innerHTML = activity.map((a, i) => `
+    <div class="act-item">
+      <div class="adot ${a.type}"></div>
+      <div style="font-size:11px;color:var(--text-light);min-width:24px;text-align:center;font-weight:700">${i + 1}</div>
+      <div class="atext">${a.text}</div>
+      <div class="atime">${a.time}</div>
+    </div>`).join('');
+    }
+
+    function clearAct() {
+      if (!confirm('مسح سجل النشاطات؟')) return;
+      activity = []; saveA();
+      renderActList();
+      renderActListFull();
+      toast('تم مسح السجل', 'info');
+    }
+
+    // ALERTS
+    function renderAlerts() {
+      const low = products.filter(p => getStatus(p) !== 'متوفر');
+      const el = document.getElementById('alerts-cont');
+      if (!low.length) { el.innerHTML = '<div class="card"><div class="empty"><div class="ei">✅</div><h3>المستودع في حالة ممتازة</h3><p>جميع المنتجات فوق الحد الأدنى. لا توجد تنبيهات حالياً.</p></div></div>'; return; }
+      el.innerHTML = `<div style="margin-bottom:14px"><div style="font-size:16px;font-weight:800;margin-bottom:3px">🔔 ${low.length} منتج يحتاج مراجعة</div></div>
+  ${low.map(p => {
+        const crit = getStatus(p) === 'نفذ'; return `
+    <div class="alert-item ${crit ? 'crit' : 'warn'}">
+      <div class="aicon">${crit ? '🚨' : '⚠️'}</div>
+      ${p.image ? `<img src="${p.image}" style="width:42px;height:42px;border-radius:9px;object-fit:cover">` : ''}
+      <div class="ainfo"><div class="aname">${p.name}</div><div class="adetail">${p.category} • الحد الأدنى: ${p.minQty || 10} وحدة</div></div>
+      <div><div class="aqty">${p.qty}</div><div style="font-size:10px;text-align:center;color:var(--text-muted)">وحدة</div></div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <button class="btn btn-ghost btn-sm" onclick="openAddModal(${p.id})">✏️</button>
+        <button class="btn btn-success btn-sm" onclick="openTxnModal('in',${p.id})">📥</button>
+      </div>
+    </div>`}).join('')}`;
+    }
+
+    // REPORTS
+    function renderReports() {
+      const total = products.length, totalQty = products.reduce((s, p) => s + p.qty, 0);
+      const totalVal = products.reduce((s, p) => s + (p.qty * (p.price || 0)), 0);
+      const instock = products.filter(p => getStatus(p) === 'متوفر').length;
+      const low = products.filter(p => getStatus(p) === 'منخفض').length;
+      const out = products.filter(p => getStatus(p) === 'نفذ').length;
+      const cats = new Set(products.map(p => p.category)).size;
+      const txnIn = transactions.filter(t => t.type === 'in').reduce((s, t) => s + t.qty, 0);
+      const txnOut = transactions.filter(t => t.type === 'out').reduce((s, t) => s + t.qty, 0);
+      document.getElementById('rep-summary').innerHTML = [
+        ['📦 إجمالي المنتجات', total, 'sv-blue'],
+        ['🔢 إجمالي الوحدات', totalQty.toLocaleString(), 'sv-blue'],
+        ['💰 القيمة الإجمالية', totalVal.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) + ' ر.س', 'sv-amber'],
+        ['✅ متوفر', instock, 'sv-green'], ['⚠️ منخفض', low, 'sv-amber'], ['❌ نفذ', out, 'sv-red'],
+        ['🏷️ عدد الفئات', cats, 'sv-blue'],
+        ['📥 إجمالي الاستلام', txnIn.toLocaleString(), 'sv-green'],
+        ['📤 إجمالي الصرف', txnOut.toLocaleString(), 'sv-red'],
+      ].map(([l, v, c]) => `<div class="sum-item"><div class="sl">${l}</div><div class="sv ${c}">${v}</div></div>`).join('');
+      const cats2 = {}, cats3 = {};
+      products.forEach(p => { cats2[p.category] = (cats2[p.category] || 0) + p.qty; cats3[p.category] = (cats3[p.category] || 0) + (p.qty * (p.price || 0)) });
+      const clrs = ['#c0392b', '#e74c3c', '#a93226', '#10b981', '#f59e0b', '#7c3aed'];
+      const ctx2 = document.getElementById('chart-rep-bar').getContext('2d');
+      if (repBarChart) repBarChart.destroy();
+      if (Object.keys(cats2).length) repBarChart = new Chart(ctx2, { type: 'bar', data: { labels: Object.keys(cats2), datasets: [{ label: 'الكمية', data: Object.values(cats2), backgroundColor: clrs, borderRadius: 7 }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } } });
+      const ctx3 = document.getElementById('chart-rep-val').getContext('2d');
+      if (repValChart) repValChart.destroy();
+      if (Object.keys(cats3).length) repValChart = new Chart(ctx3, { type: 'doughnut', data: { labels: Object.keys(cats3), datasets: [{ data: Object.values(cats3), backgroundColor: clrs, borderWidth: 2, borderColor: isDark ? '#111' : '#fff' }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Tajawal', size: 11 }, padding: 8 } } }, cutout: '55%' } });
+    }
+
+    // EXPORT
+    function exportCSV() {
+      if (!products.length) { toast('لا يوجد منتجات', 'error'); return; }
+      const h = ['الاسم', 'SKU', 'الفئة', 'الكمية', 'الحد الأدنى', 'السعر', 'القيمة', 'المورد', 'الموقع', 'الحالة', 'التاريخ'];
+      const rows = products.map(p => [p.name, p.sku || '', p.category, p.qty, p.minQty || 10, p.price || 0, (p.qty * (p.price || 0)).toFixed(0), p.supplier || '', p.location || '', getStatus(p), p.date || '']);
+      const csv = '\uFEFF' + [h, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+      a.download = '4U_مستودع_' + new Date().toLocaleDateString('ar-SA').replace(/\//g, '-') + '.csv';
+      a.click();
+      toast('✅ تم تصدير الملف', 'success');
+    }
+
+    function gSearch(v) {
+      if (!v.trim()) return;
+      document.getElementById('psearch').value = v;
+      showPage('products', document.querySelectorAll('.nav-item')[1]);
+      renderTable();
+    }
+
+    function log(type, text) {
+      activity.unshift({ type, text, time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) });
+      if (activity.length > 60) activity.pop();
+      saveA();
+    }
+
+    function updateBadges() {
+      const low = products.filter(p => getStatus(p) !== 'متوفر').length;
+      const nb = document.getElementById('nb-alerts');
+      nb.textContent = low; nb.style.display = low ? '' : 'none';
+      document.getElementById('nb-products').textContent = products.length;
+    }
+
+    function updateAll() {
+      updateDash();
+      const active = document.querySelector('.page.active');
+      if (active?.id === 'page-products') renderTable();
+      if (active?.id === 'page-alerts') renderAlerts();
+      if (active?.id === 'page-reports') renderReports();
+      if (active?.id === 'page-transactions') renderTxn();
+    }
+
+    function toast(msg, type = 'success') {
+      const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.innerHTML = `<span class="toast-icon">${icons[type] || '•'}</span><span class="toast-msg">${msg}</span>`;
+      document.getElementById('toast-cont').appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-10px)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300) }, 3000);
+    }
+
+    // ============================================================
+    // APP INIT — Load from Firestore then render
+    // ============================================================
+    async function initApp() {
+      // Show loading spinner in dashboard while Firestore loads
+      const dashEl = document.getElementById('page-dashboard');
+      if (dashEl) {
+        const loader = document.createElement('div');
+        loader.id = 'init-loader';
+        loader.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:8000;gap:12px';
+        loader.innerHTML = '<div class="loading-spinner"></div><div style="color:#fff;font-size:13px;letter-spacing:2px;opacity:0.7">جاري التحميل...</div>';
+        document.body.appendChild(loader);
+      }
+
+      try {
+        await loadProducts();
+        await loadTransactions();
+
+        if (products.length === 0) {
+          const sampleProducts = [
+            { name: 'لابتوب Dell XPS 15', sku: 'PRD-001', category: 'إلكترونيات', qty: 25, minQty: 5, price: 4500, supplier: 'شركة الخليج', location: 'رف A-1', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'طابعة HP LaserJet Pro', sku: 'PRD-002', category: 'إلكترونيات', qty: 8, minQty: 10, price: 1200, supplier: 'مكتبة النور', location: 'رف A-2', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'ورق A4 (رزمة)', sku: 'PRD-003', category: 'قرطاسية', qty: 200, minQty: 30, price: 35, supplier: 'مستلزمات الأعمال', location: 'رف B-1', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'أقلام حبر جاف', sku: 'PRD-004', category: 'قرطاسية', qty: 5, minQty: 15, price: 12, supplier: 'مستلزمات الأعمال', location: 'رف B-2', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'كرسي مكتبي', sku: 'PRD-005', category: 'أثاث', qty: 12, minQty: 3, price: 850, supplier: 'الأثاث الحديث', location: 'رف C-1', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'مكيف سبليت 18000', sku: 'PRD-006', category: 'أجهزة', qty: 0, minQty: 2, price: 2800, supplier: 'برودة العالمية', location: 'رف D-1', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'شاشة Samsung 27"', sku: 'PRD-007', category: 'إلكترونيات', qty: 18, minQty: 5, price: 1350, supplier: 'شركة الخليج', location: 'رف A-3', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'ماوس لاسلكي', sku: 'PRD-008', category: 'ملحقات', qty: 45, minQty: 10, price: 95, supplier: 'تك بلس', location: 'رف A-4', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'لوحة مفاتيح ميكانيكية', sku: 'PRD-009', category: 'ملحقات', qty: 3, minQty: 5, price: 180, supplier: 'تك بلس', location: 'رف A-5', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+            { name: 'مكتب زاوية خشبي', sku: 'PRD-010', category: 'أثاث', qty: 7, minQty: 2, price: 1200, supplier: 'الأثاث الحديث', location: 'رف C-2', notes: '', image: '', date: new Date().toLocaleDateString('ar-SA') },
+          ];
+          const batch = db.batch();
+          sampleProducts.forEach(p => {
+            const ref = productsCol.doc();
+            batch.set(ref, { ...p, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+          });
+          try {
+            await batch.commit();
+            await loadProducts();
+            log('add', 'تم تحميل البيانات التجريبية إلى Firestore');
+          } catch (e) { console.error('Seed error:', e); }
+        }
+      } finally {
+        // Remove loader
+        const loader = document.getElementById('init-loader');
+        if (loader) loader.remove();
+      }
+
+      updateDash();
+    }
+
+    // Run init only if user is already logged in (auto-login session restore)
+    if (document.getElementById('app').style.display === 'block') {
+      initApp();
+    }
+  </script>
+</body>
+
+</html>
