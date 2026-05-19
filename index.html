@@ -3427,20 +3427,51 @@
     // ============================================================
     // FIREBASE INIT — using compat SDK for plain HTML file
     // ============================================================
-    const firebaseConfig = {
-      apiKey: "AIzaSyBC8sgr57fdxhfdXCkeW0inpj_DFynpC64",
-      authDomain: "u-warhouse.firebaseapp.com",
-      projectId: "u-warhouse",
-      storageBucket: "u-warhouse.firebasestorage.app",
-      messagingSenderId: "948404449640",
-      appId: "1:948404449640:web:b1fd47a11293e2b75f26dd"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    let db = null;
+    let productsCol = null;
+    let transactionsCol = null;
 
-    // Firestore collection references
-    const productsCol = db.collection('products');
-    const transactionsCol = db.collection('transactions');
+    // Wait for Firebase to load, then initialize
+    function initFirebase() {
+      if (typeof firebase === 'undefined') {
+        setTimeout(initFirebase, 100);
+        return;
+      }
+      
+      const firebaseConfig = {
+        apiKey: "AIzaSyBC8sgr57fdxhfdXCkeW0inpj_DFynpC64",
+        authDomain: "u-warhouse.firebaseapp.com",
+        projectId: "u-warhouse",
+        storageBucket: "u-warhouse.firebasestorage.app",
+        messagingSenderId: "948404449640",
+        appId: "1:948404449640:web:b1fd47a11293e2b75f26dd"
+      };
+      
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      db = firebase.firestore();
+      productsCol = db.collection('products');
+      transactionsCol = db.collection('transactions');
+    }
+
+    initFirebase();
+
+    // ============================================================
+    // GLOBAL VARIABLES — Defined at TOP to avoid TDZ errors
+    // ============================================================
+    var USERS = { admin: '1234', مدير: 'admin' };
+    var CURRENCY_LABELS = {
+      IQD: 'د.ع',
+      SAR: 'ر.س',
+      USD: '$',
+      AED: 'د.إ'
+    };
+
+    // ============================================================
+    // APP SETTINGS — Define IMMEDIATELY after Firebase
+    // ============================================================
+    let appSettings = JSON.parse(localStorage.getItem('wms_settings') || '{"timefmt":"12","currency":"IQD","country":"IQ","lang":"ar","role":"admin","avatar":"م"}');
 
     // ============================================================
     // STATE
@@ -3666,7 +3697,7 @@
     // ============================================================
     // LOGIN — unchanged logic, preserved
     // ============================================================
-    const USERS = { admin: '1234', مدير: 'admin' };
+    // USERS defined at top of script
     function doLogin() {
       const u = document.getElementById('l-user').value.trim();
       const p = document.getElementById('l-pass').value;
@@ -3843,7 +3874,7 @@
     // ============================================================
     // SETTINGS & ROLES
     // ============================================================
-    let appSettings = JSON.parse(localStorage.getItem('wms_settings') || '{"timefmt":"12","currency":"IQD","country":"IQ","lang":"ar","role":"admin","avatar":"م"}');
+    // appSettings defined at top of script
 
     function syncSettingsUI() {
       const s = appSettings;
@@ -4338,7 +4369,7 @@
     // ============================================================
     // CURRENCY HELPER
     // ============================================================
-    const CURRENCY_LABELS = { IQD: 'د.ع', SAR: 'ر.س', USD: '$', AED: 'د.إ' };
+    // CURRENCY_LABELS defined at top
     function getCurrencyLabel() { return CURRENCY_LABELS[appSettings.currency] || appSettings.currency; }
     function formatPrice(val) {
       if (!val && val !== 0) return '—';
